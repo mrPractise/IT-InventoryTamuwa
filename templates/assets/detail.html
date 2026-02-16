@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Asset Details - {{ asset.asset_id }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle"></i> Asset Information
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Asset ID:</strong><br>
+                        <span class="fs-5">{{ asset.asset_id }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Status:</strong><br>
+                        <span class="status-badge status-{{ asset.status.name|lower|slugify }}">
+                            {{ asset.status.name }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Category:</strong><br>
+                        {{ asset.category.name }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Serial Number:</strong><br>
+                        {{ asset.serial_number }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Model/Description:</strong><br>
+                        {{ asset.model_description }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Purchase Date:</strong><br>
+                        {{ asset.purchase_date|date:"M d, Y"|default:"Not set" }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Assigned To:</strong><br>
+                        {{ asset.assigned_to.username|default:"Unassigned" }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Department:</strong><br>
+                        {{ asset.department.name|default:"Not set" }}
+                    </div>
+                </div>
+                
+                {% if asset.admin_comments %}
+                <div class="mb-3">
+                    <strong>Admin Comments:</strong><br>
+                    <p class="text-muted">{{ asset.admin_comments }}</p>
+                </div>
+                {% endif %}
+                
+                {% if user.profile.role == 'super_admin' or user.profile.role == 'admin' or user.is_superuser %}
+                <div class="mt-4">
+                    <a href="{% url 'assets:update' asset.pk %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Edit Asset
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Assignment History -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Assignment History
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in assignment_history %}
+                            <tr>
+                                <td>{{ assignment.user.username|default:"Unassigned" }}</td>
+                                <td>{{ assignment.start_date|date:"M d, Y H:i" }}</td>
+                                <td>{{ assignment.end_date|date:"M d, Y H:i"|default:"Current" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">No assignment history</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Maintenance Logs -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="bi bi-tools"></i> Maintenance History
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date Reported</th>
+                                <th>Status</th>
+                                <th>Description</th>
+                                <th>Action Taken</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in maintenance_logs %}
+                            <tr>
+                                <td>{{ log.date_reported|date:"M d, Y" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if log.maintenance_status == 'Open' %}warning{% else %}success{% endif %}">
+                                        {{ log.maintenance_status }}
+                                    </span>
+                                </td>
+                                <td>{{ log.description|truncatewords:10 }}</td>
+                                <td>{{ log.action_taken.name|default:"N/A" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No maintenance records</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- QR Code -->
+        {% if asset.qr_code %}
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-qr-code"></i> QR Code
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ asset.qr_code.url }}" alt="QR Code" class="img-fluid">
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Activity Log -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <i class="bi bi-activity"></i> Recent Activity
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for activity in activity_logs %}
+                    <div class="list-group-item">
+                        <small class="text-muted">{{ activity.timestamp|date:"M d, H:i" }}</small><br>
+                        <strong>{{ activity.get_action_display }}</strong><br>
+                        <small>{{ activity.description|truncatewords:8 }}</small>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted">No activity</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

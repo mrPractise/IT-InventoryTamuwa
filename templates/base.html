@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AssetCore - Inventory Management{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <style>
+        :root {
+            --sidebar-width: 250px;
+            --header-height: 60px;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding-top: var(--header-height);
+            z-index: 1000;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar-brand {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: var(--header-height);
+            background: #1a252f;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 1001;
+            border-bottom: 3px solid #3498db;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .sidebar-menu li {
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding-left: 25px;
+        }
+        
+        .sidebar-menu i {
+            margin-right: 10px;
+            width: 20px;
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .top-header {
+            background: white;
+            padding: 15px 20px;
+            margin: -20px -20px 20px -20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card .stat-icon {
+            font-size: 2.5rem;
+            opacity: 0.8;
+        }
+        
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-in-use { background: #d4edda; color: #155724; }
+        .status-available { background: #d1ecf1; color: #0c5460; }
+        .status-maintenance { background: #fff3cd; color: #856404; }
+        .status-missing { background: #f8d7da; color: #721c24; }
+        .status-retired { background: #e2e3e5; color: #383d41; }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-box-seam"></i> AssetCore
+        </div>
+        <ul class="sidebar-menu">
+            <li>
+                <a href="{% url 'dashboard:home' %}" class="{% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'assets:list' %}" class="{% if request.resolver_match.app_name == 'assets' %}active{% endif %}">
+                    <i class="bi bi-box"></i> Assets
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'maintenance:list' %}" class="{% if request.resolver_match.app_name == 'maintenance' %}active{% endif %}">
+                    <i class="bi bi-tools"></i> Maintenance
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'users:profile' %}">
+                    <i class="bi bi-person-circle"></i> Profile
+                </a>
+            </li>
+            {% if user.is_superuser or user.profile.role == 'super_admin' or user.profile.role == 'admin' %}
+            <li>
+                <a href="/admin/">
+                    <i class="bi bi-gear"></i> Admin Panel
+                </a>
+            </li>
+            {% endif %}
+            <li>
+                <a href="{% url 'users:logout' %}">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="top-header">
+            <div>
+                <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="toggleSidebar()">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h4 class="mb-0 d-inline ms-2">{% block page_title %}Dashboard{% endblock %}</h4>
+            </div>
+            <div>
+                <span class="text-muted">Welcome, <strong>{{ user.username }}</strong></span>
+            </div>
+        </div>
+    {% endif %}
+    
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    
+    {% if user.is_authenticated %}
+    </div>
+    {% endif %}
+    
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('show');
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

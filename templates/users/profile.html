@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Profile{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-person-circle"></i> User Profile
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>User Information</h5>
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Email:</strong> {{ user.email|default:"Not set" }}</p>
+                <p><strong>Role:</strong> 
+                    {% if profile %}
+                        {{ profile.get_role_display }}
+                    {% else %}
+                        Viewer
+                    {% endif %}
+                </p>
+                {% if profile %}
+                <p><strong>Department:</strong> {{ profile.department.name|default:"Not assigned" }}</p>
+                <p><strong>Employee ID:</strong> {{ profile.employee_id|default:"Not set" }}</p>
+                <p><strong>Phone:</strong> {{ profile.phone_number|default:"Not set" }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

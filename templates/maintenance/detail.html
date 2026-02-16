@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Maintenance Detail{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-tools"></i> Maintenance Log Details
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Asset:</strong><br>
+                <a href="{% url 'assets:detail' log.asset.pk %}">{{ log.asset.asset_id }}</a>
+            </div>
+            <div class="col-md-6">
+                <strong>Status:</strong><br>
+                <span class="badge bg-{% if log.maintenance_status == 'Open' %}warning{% else %}success{% endif %}">
+                    {{ log.maintenance_status }}
+                </span>
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Date Reported:</strong><br>
+                {{ log.date_reported|date:"M d, Y" }}
+            </div>
+            <div class="col-md-6">
+                <strong>Date Completed:</strong><br>
+                {{ log.date_completed|date:"M d, Y"|default:"Not completed" }}
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <strong>Description:</strong><br>
+            <p>{{ log.description }}</p>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Action Taken:</strong><br>
+                {{ log.action_taken.name|default:"Not specified" }}
+            </div>
+            <div class="col-md-6">
+                <strong>Cost of Repair:</strong><br>
+                ${{ log.cost_of_repair|default:"0.00" }}
+            </div>
+        </div>
+        
+        {% if log.notes %}
+        <div class="mb-3">
+            <strong>Notes:</strong><br>
+            <p class="text-muted">{{ log.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

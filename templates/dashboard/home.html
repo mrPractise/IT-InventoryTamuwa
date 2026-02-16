@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <!-- Stat Cards -->
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Total Assets</h6>
+                    <h2 class="mb-0">{{ total_assets }}</h2>
+                </div>
+                <div class="stat-icon text-primary">
+                    <i class="bi bi-box-seam"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">In Use</h6>
+                    <h2 class="mb-0 text-success">{{ status_in_use }}</h2>
+                </div>
+                <div class="stat-icon text-success">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Available</h6>
+                    <h2 class="mb-0 text-info">{{ status_available }}</h2>
+                </div>
+                <div class="stat-icon text-info">
+                    <i class="bi bi-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Under Maintenance</h6>
+                    <h2 class="mb-0 text-warning">{{ status_maintenance }}</h2>
+                </div>
+                <div class="stat-icon text-warning">
+                    <i class="bi bi-tools"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Status Distribution Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-pie-chart"></i> Asset Status Distribution
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Category Distribution Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-bar-chart"></i> Category Distribution
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Activity -->
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Recent Activity
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Asset</th>
+                                <th>Action</th>
+                                <th>User</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity in recent_activities %}
+                            <tr>
+                                <td>{{ activity.timestamp|date:"M d, Y H:i" }}</td>
+                                <td>
+                                    <a href="{% url 'assets:detail' activity.asset.pk %}">
+                                        {{ activity.asset.asset_id }}
+                                    </a>
+                                </td>
+                                <td><span class="badge bg-primary">{{ activity.get_action_display }}</span></td>
+                                <td>{{ activity.user.username|default:"System" }}</td>
+                                <td>{{ activity.description }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No recent activity</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Status Distribution Pie Chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const statusLabels = {{ status_labels|safe|default:"[]" }};
+    const statusValues = {{ status_values|safe|default:"[]" }};
+    
+    if (statusLabels.length > 0) {
+        new Chart(statusCtx, {
+            type: 'pie',
+            data: {
+                labels: statusLabels,
+                datasets: [{
+                    data: statusValues,
+                    backgroundColor: [
+                        '#28a745', // In Use - Green
+                        '#17a2b8', // Available - Blue
+                        '#ffc107', // Under Maintenance - Yellow
+                        '#dc3545', // Missing - Red
+                        '#6c757d', // Retired - Gray
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    // Category Distribution Bar Chart
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    const categoryLabels = {{ category_labels|safe|default:"[]" }};
+    const categoryValues = {{ category_values|safe|default:"[]" }};
+    
+    if (categoryLabels.length > 0) {
+        new Chart(categoryCtx, {
+            type: 'bar',
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    label: 'Assets',
+                    data: categoryValues,
+                    backgroundColor: '#667eea'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
