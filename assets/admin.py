@@ -45,7 +45,7 @@ class AssetAdmin(admin.ModelAdmin):
     ]
     list_filter = ['status', 'category', 'assigned_to', 'created_at', 'purchase_date']
     search_fields = ['asset_id', 'serial_number', 'model_description']
-    readonly_fields = ['created_at', 'updated_at', 'qr_code']
+    readonly_fields = ['created_at', 'updated_at']
     fieldsets = (
         ('Basic Information', {
             'fields': ('asset_id', 'category', 'model_description', 'serial_number', 'purchase_date')
@@ -54,7 +54,7 @@ class AssetAdmin(admin.ModelAdmin):
             'fields': ('assigned_to', 'department', 'last_known_user', 'status')
         }),
         ('Additional Information', {
-            'fields': ('admin_comments', 'qr_code')
+            'fields': ('admin_comments',)
         }),
         ('Metadata', {
             'fields': ('created_by', 'updated_by', 'created_at', 'updated_at', 'is_deleted'),

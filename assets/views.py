@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from .models import Asset, Category, StatusOption, Department
-from .utils import generate_qr_code, export_assets_excel, export_assets_pdf
+from .utils import export_assets_excel, export_assets_pdf
 from users.decorators import role_required
 
 
@@ -99,10 +99,24 @@ def asset_create(request):
             asset = form.save(commit=False)
             asset.created_by = request.user
             asset.updated_by = request.user
-            asset.save()
             
-            # Generate QR code
-            generate_qr_code(asset)
+            # If asset_id is blank, generate it dynamically here as a fallback
+            if not asset.asset_id and asset.category.short_code:
+                last_asset = Asset.objects.filter(
+                    category=asset.category,
+                    asset_id__startswith=f"{asset.category.short_code}-"
+                ).order_by('-asset_id').first()
+                if last_asset and '-' in last_asset.asset_id:
+                    try:
+                        last_num = int(last_asset.asset_id.split('-')[1])
+                        next_num = last_num + 1
+                    except ValueError:
+                        next_num = 1
+                else:
+                    next_num = 1
+                asset.asset_id = f"{asset.category.short_code}-{next_num:03d}"
+            
+            asset.save()
             
             messages.success(request, f'Asset {asset.asset_id} created successfully!')
             return redirect('assets:detail', pk=asset.pk)
@@ -125,10 +139,6 @@ def asset_update(request, pk):
             asset = form.save(commit=False)
             asset.updated_by = request.user
             asset.save()
-            
-            # Regenerate QR code if needed
-            if not asset.qr_code:
-                generate_qr_code(asset)
             
             messages.success(request, f'Asset {asset.asset_id} updated successfully!')
             return redirect('assets:detail', pk=asset.pk)
@@ -166,3 +176,32 @@ def asset_export_pdf(request):
     """Export assets to PDF"""
     assets = Asset.objects.filter(is_deleted=False).select_related('category', 'status', 'assigned_to')
     return export_assets_pdf(assets)
+
+@login_required
+def get_next_asset_id(request):
+    """API endpoint to get the next auto-incremented asset ID for a category"""
+    category_id = request.GET.get('category_id')
+    if not category_id:
+        return JsonResponse({'error': 'No category ID provided'}, status=400)
+        
+    category = get_object_or_404(Category, id=category_id)
+    if not category.short_code:
+        return JsonResponse({'asset_id': ''})
+        
+    last_asset = Asset.objects.filter(
+        category=category,
+        asset_id__startswith=f"{category.short_code}-"
+    ).order_by('-asset_id').first()
+    
+    if last_asset and '-' in last_asset.asset_id:
+        try:
+            last_num = int(last_asset.asset_id.split('-')[1])
+            next_num = last_num + 1
+        except ValueError:
+            next_num = 1
+    else:
+        next_num = 1
+        
+    next_id = f"{category.short_code}-{next_num:03d}"
+    
+    return JsonResponse({'asset_id': next_id})

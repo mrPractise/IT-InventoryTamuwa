@@ -44,3 +44,44 @@ def maintenance_detail(request, pk):
     """Maintenance log detail"""
     log = get_object_or_404(MaintenanceLog, pk=pk)
     return render(request, 'maintenance/detail.html', {'log': log})
+
+
+@login_required
+@role_required(['super_admin', 'admin'])
+def maintenance_create(request):
+    """Create new maintenance log from frontend"""
+    from .forms import MaintenanceLogForm
+    
+    if request.method == 'POST':
+        form = MaintenanceLogForm(request.POST)
+        if form.is_valid():
+            log = form.save(commit=False)
+            log.reported_by = request.user
+            if log.maintenance_status == 'Closed':
+                log.completed_by = request.user
+            log.save()
+            
+            # If status of maintenance is Open, we might want to update Asset status to 'Under Maintenance'
+            # (Signal already creates a maintenance log when asset status changes to Under Maintenance, 
+            # here we're doing the reverse, creating a maintenance log and updating the asset)
+            if log.maintenance_status == 'Open' and log.asset.status.name != 'Under Maintenance':
+                from assets.models import StatusOption
+                maintenance_status_opt = StatusOption.objects.filter(name='Under Maintenance').first()
+                if maintenance_status_opt:
+                    # Update status without triggering signal (or let signal trigger but it might cause loop depending on implementation)
+                    # We can let it be or just update it
+                    asset = log.asset
+                    asset.status = maintenance_status_opt
+                    asset.save(update_fields=['status'])
+            
+            messages.success(request, f'Maintenance log for {log.asset.asset_id} created successfully!')
+            return redirect('maintenance:detail', pk=log.pk)
+    else:
+        # Pre-select asset if passed in URL
+        initial = {}
+        asset_id = request.GET.get('asset')
+        if asset_id:
+            initial['asset'] = asset_id
+        form = MaintenanceLogForm(initial=initial)
+    
+    return render(request, 'maintenance/form.html', {'form': form, 'title': 'Add Maintenance Log'})

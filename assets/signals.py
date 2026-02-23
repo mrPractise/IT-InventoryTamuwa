@@ -30,9 +30,13 @@ def auto_update_status_on_assignment(sender, instance, **kwargs):
             if instance.assigned_to != old_assigned_to and old_assigned_to:
                 instance.last_known_user = old_assigned_to
                 
+            # Attach old instance for post_save signals
+            instance._old_instance = old_instance
+            
         except Asset.DoesNotExist:
-            pass
+            instance._old_instance = None
     else:  # New asset
+        instance._old_instance = None
         # If assigned_to is set on creation, set status to "In Use"
         if instance.assigned_to:
             in_use_status = StatusOption.objects.filter(name='In Use').first()
@@ -53,8 +57,8 @@ def handle_assignment_history(sender, instance, created, **kwargs):
             )
     else:
         # Existing asset - check if assignment changed
-        try:
-            old_instance = Asset.objects.get(pk=instance.pk)
+        old_instance = getattr(instance, '_old_instance', None)
+        if old_instance:
             old_assigned_to = old_instance.assigned_to
             
             if instance.assigned_to != old_assigned_to:
@@ -81,19 +85,18 @@ def handle_assignment_history(sender, instance, created, **kwargs):
                             user=instance.assigned_to,
                             start_date=timezone.now()
                         )
-        except Asset.DoesNotExist:
-            pass
+        # Removed broken try/except that fetched new instance
 
 
 @receiver(post_save, sender=Asset)
 def create_maintenance_log_on_status_change(sender, instance, created, **kwargs):
     """Auto-create maintenance log when status changes to 'Under Maintenance'"""
     if not created:
-        try:
-            old_instance = Asset.objects.get(pk=instance.pk)
+        old_instance = getattr(instance, '_old_instance', None)
+        if old_instance:
             old_status = old_instance.status
             
-            if instance.status.name == 'Under Maintenance' and old_status.name != 'Under Maintenance':
+            if instance.status and old_status and instance.status.name == 'Under Maintenance' and old_status.name != 'Under Maintenance':
                 from maintenance.models import MaintenanceLog
                 
                 MaintenanceLog.objects.create(
@@ -103,8 +106,7 @@ def create_maintenance_log_on_status_change(sender, instance, created, **kwargs)
                     description=f"Asset automatically moved to maintenance. Previous status: {old_status.name}",
                     previous_assigned_user=instance.last_known_user
                 )
-        except Asset.DoesNotExist:
-            pass
+        # Removed broken try/except that fetched new instance
 
 
 @receiver(post_save, sender=Asset)
@@ -114,8 +116,8 @@ def log_activity(sender, instance, created, **kwargs):
     description = f"Asset {instance.asset_id} was {'created' if created else 'updated'}"
     
     if not created:
-        try:
-            old_instance = Asset.objects.get(pk=instance.pk)
+        old_instance = getattr(instance, '_old_instance', None)
+        if old_instance:
             changes = []
             
             if old_instance.assigned_to != instance.assigned_to:
@@ -128,8 +130,6 @@ def log_activity(sender, instance, created, **kwargs):
             
             if changes:
                 description = f"Asset {instance.asset_id}: " + ", ".join(changes)
-        except Asset.DoesNotExist:
-            pass
     
     # Note: In a real implementation, you'd get the current user from request
     # For now, we'll use the created_by/updated_by fields

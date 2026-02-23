@@ -93,7 +93,7 @@ class AssetSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["qr_code", "created_at", "updated_at"]
+        read_only_fields = ["created_at", "updated_at"]
 
 
 class AssignmentHistorySerializer(serializers.ModelSerializer):

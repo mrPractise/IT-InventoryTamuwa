@@ -12,11 +12,11 @@ class AssetForm(forms.ModelForm):
             'admin_comments'
         ]
         widgets = {
-            'asset_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'asset_id': forms.TextInput(attrs={'class': 'form-control', 'readonly': 'readonly'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
             'model_description': forms.TextInput(attrs={'class': 'form-control'}),
             'serial_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'purchase_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'purchase_date': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'dd/mm/yyyy'}),
             'assigned_to': forms.Select(attrs={'class': 'form-control'}),
             'department': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
@@ -32,3 +32,4 @@ class AssetForm(forms.ModelForm):
         self.fields['assigned_to'].required = False
         self.fields['department'].required = False
         self.fields['purchase_date'].required = False
+        self.fields['asset_id'].required = False

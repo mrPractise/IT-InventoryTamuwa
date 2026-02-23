@@ -24,6 +24,7 @@ class Department(models.Model):
 class Category(models.Model):
     """Dynamic category management"""
     name = models.CharField(max_length=100, unique=True)
+    short_code = models.CharField(max_length=10, unique=True, null=True, blank=True, help_text="e.g. MSE for Mouse")
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -87,7 +88,6 @@ class Asset(models.Model):
     )
     status = models.ForeignKey(StatusOption, on_delete=models.PROTECT, related_name='assets')
     admin_comments = models.TextField(blank=True)
-    qr_code = models.ImageField(upload_to='qr_codes/', blank=True, null=True)
     is_deleted = models.BooleanField(default=False, db_index=True)  # Soft delete
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

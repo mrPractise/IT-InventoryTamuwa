@@ -20,7 +20,37 @@
                 </span>
             </div>
         </div>
-        
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Category:</strong><br>
+                {{ log.asset.category.name|default:"N/A" }}
+            </div>
+            <div class="col-md-6">
+                <strong>Department:</strong><br>
+                {{ log.asset.department.name|default:"N/A" }}
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Assigned User:</strong><br>
+                {% if log.asset.assigned_to %}
+                {{ log.asset.assigned_to.get_full_name|default:log.asset.assigned_to.username }}
+                {% else %}
+                <span class="text-muted">Unassigned</span>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <strong>Previous User (if auto-created):</strong><br>
+                {% if log.previous_assigned_user %}
+                {{ log.previous_assigned_user.get_full_name|default:log.previous_assigned_user.username }}
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </div>
+        </div>
+
         <div class="row mb-3">
             <div class="col-md-6">
                 <strong>Date Reported:</strong><br>
@@ -31,12 +61,12 @@
                 {{ log.date_completed|date:"M d, Y"|default:"Not completed" }}
             </div>
         </div>
-        
+
         <div class="mb-3">
             <strong>Description:</strong><br>
             <p>{{ log.description }}</p>
         </div>
-        
+
         <div class="row mb-3">
             <div class="col-md-6">
                 <strong>Action Taken:</strong><br>
@@ -47,7 +77,7 @@
                 ${{ log.cost_of_repair|default:"0.00" }}
             </div>
         </div>
-        
+
         {% if log.notes %}
         <div class="mb-3">
             <strong>Notes:</strong><br>
