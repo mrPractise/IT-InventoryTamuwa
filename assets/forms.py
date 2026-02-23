@@ -1,6 +1,5 @@
 from django import forms
-from .models import Asset, Category, StatusOption, Department
-from django.contrib.auth.models import User
+from .models import Asset, Category, StatusOption, Department, Person
 
 
 class AssetForm(forms.ModelForm):
@@ -27,7 +26,7 @@ class AssetForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['category'].queryset = Category.objects.all().order_by('name')
         self.fields['status'].queryset = StatusOption.objects.filter(is_active=True)
-        self.fields['assigned_to'].queryset = User.objects.filter(is_active=True).order_by('username')
+        self.fields['assigned_to'].queryset = Person.objects.all().order_by('first_name', 'last_name')
         self.fields['department'].queryset = Department.objects.all().order_by('name')
         self.fields['assigned_to'].required = False
         self.fields['department'].required = False

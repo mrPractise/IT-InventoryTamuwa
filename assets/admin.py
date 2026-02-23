@@ -1,12 +1,13 @@
 from django.contrib import admin
-from .models import Asset, Category, StatusOption, Department, AssignmentHistory, ActivityLog
+from .models import Asset, Category, StatusOption, Department, Person, AssignmentHistory, ActivityLog
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'description', 'created_at']
-    search_fields = ['name']
+    list_display = ['name', 'short_code', 'description', 'created_at']
+    search_fields = ['name', 'short_code']
     list_filter = ['created_at']
+    list_editable = ['short_code']
 
 
 @admin.register(StatusOption)
@@ -20,6 +21,13 @@ class StatusOptionAdmin(admin.ModelAdmin):
 class DepartmentAdmin(admin.ModelAdmin):
     list_display = ['name', 'description', 'created_at']
     search_fields = ['name']
+
+
+@admin.register(Person)
+class PersonAdmin(admin.ModelAdmin):
+    list_display = ['first_name', 'last_name', 'department', 'created_at']
+    list_filter = ['department', 'created_at']
+    search_fields = ['first_name', 'last_name']
 
 
 class AssignmentHistoryInline(admin.TabularInline):
@@ -41,9 +49,9 @@ class ActivityLogInline(admin.TabularInline):
 class AssetAdmin(admin.ModelAdmin):
     list_display = [
         'asset_id', 'category', 'model_description', 'serial_number',
-        'assigned_to', 'status', 'purchase_date', 'created_at'
+        'assigned_to', 'department', 'status', 'purchase_date', 'created_at'
     ]
-    list_filter = ['status', 'category', 'assigned_to', 'created_at', 'purchase_date']
+    list_filter = ['status', 'category', 'assigned_to', 'department', 'created_at', 'purchase_date']
     search_fields = ['asset_id', 'serial_number', 'model_description']
     readonly_fields = ['created_at', 'updated_at']
     fieldsets = (
@@ -51,7 +59,7 @@ class AssetAdmin(admin.ModelAdmin):
             'fields': ('asset_id', 'category', 'model_description', 'serial_number', 'purchase_date')
         }),
         ('Assignment', {
-            'fields': ('assigned_to', 'department', 'last_known_user', 'status')
+            'fields': ('assigned_to', 'department', 'last_known_person', 'status')
         }),
         ('Additional Information', {
             'fields': ('admin_comments',)
@@ -69,9 +77,9 @@ class AssetAdmin(admin.ModelAdmin):
 
 @admin.register(AssignmentHistory)
 class AssignmentHistoryAdmin(admin.ModelAdmin):
-    list_display = ['asset', 'user', 'start_date', 'end_date']
-    list_filter = ['start_date', 'end_date']
-    search_fields = ['asset__asset_id', 'user__username']
+    list_display = ['asset', 'person', 'department', 'start_date', 'end_date']
+    list_filter = ['start_date', 'end_date', 'department']
+    search_fields = ['asset__asset_id', 'person__first_name', 'person__last_name', 'department__name']
     readonly_fields = ['created_at']
 
 

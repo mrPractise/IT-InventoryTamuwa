@@ -7,6 +7,7 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.comments import Comment
 from openpyxl.utils import get_column_letter
+from openpyxl.formatting.rule import FormulaRule
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -27,11 +28,11 @@ def generate_qr_code(asset):
     )
     qr.add_data(f"Asset ID: {asset.asset_id}\nSerial: {asset.serial_number}")
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color="black", back_color="white")
     buffer = BytesIO()
     img.save(buffer, format='PNG')
-    
+
     asset.qr_code.save(
         f'qr_{asset.asset_id}.png',
         File(buffer),
@@ -41,296 +42,406 @@ def generate_qr_code(asset):
 
 
 def export_assets_excel(assets):
-    """Export comprehensive Excel workbook with 5 sheets, formulas, and dropdowns"""
+    """
+    Export a fully-interconnected Excel workbook.
+
+    Sheets
+    ------
+    1. ASSET Inventory  – editable data + dropdowns linked to LISTS
+    2. QUANTITIES       – auto COUNTIFS per category/status (covers 500 LISTS rows)
+    3. MAINTENANCE LOG  – DB records + live formula section for Under-Maintenance assets
+    4. LISTS            – master dropdown source (Category / Status / Action Taken)
+    5. Past Users       – assignment history
+    6. README           – setup instructions including VBA macro for auto-status
+
+    Interconnections
+    ----------------
+    • LISTS col A → Category dropdown (Asset Inventory col B)
+    • LISTS col B → Status dropdown (Asset Inventory col H)
+    • LISTS col C → Action Taken dropdown (Maintenance Log col E)
+    • QUANTITIES re-counts live; new LISTS rows auto-appear as new quantity rows
+    • MAINTENANCE LOG auto-shows assets currently "Under Maintenance"
+    • Duplicate Asset ID blocked (COUNTIF stop validation)
+    • Duplicate Serial Number per Category blocked (COUNTIFS stop validation)
+    • Status colour-coding via conditional formatting
+    """
     wb = Workbook()
-    
-    # Remove default sheet
     wb.remove(wb.active)
-    
-    # Get all data for dropdowns and formulas
-    categories = Category.objects.all().order_by('name')
-    statuses = StatusOption.objects.filter(is_active=True).order_by('name')
-    action_taken_options = ActionTakenOption.objects.filter(is_active=True).order_by('name')
-    
-    # ========== SHEET 1: ASSET Inventory ==========
-    ws_inventory = wb.create_sheet("ASSET Inventory", 0)
-    
-    # Headers
-    headers_inventory = [
-        'Asset_ID', 'Category item', 'Model/Description', 'Purchase Date',
-        'Serial Number', 'Assigned to', 'Last Known User', 'Current Status', 'Admin Comments'
-    ]
-    ws_inventory.append(headers_inventory)
-    
-    # Style headers
-    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    header_font = Font(bold=True, color="FFFFFF", size=11)
-    border = Border(
-        left=Side(style='thin'),
-        right=Side(style='thin'),
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
+
+    # ── live data from DB ──────────────────────────────────────────────────────
+    categories           = list(Category.objects.all().order_by('name'))
+    statuses             = list(StatusOption.objects.filter(is_active=True).order_by('name'))
+    action_taken_options = list(ActionTakenOption.objects.filter(is_active=True).order_by('name'))
+
+    # ── shared styles ──────────────────────────────────────────────────────────
+    hdr_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    hdr_font = Font(bold=True, color="FFFFFF", size=11)
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'),  bottom=Side(style='thin'),
     )
-    
-    for cell in ws_inventory[1]:
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        cell.border = border
-    
-    # Data rows
+
+    def style_header_row(ws):
+        for cell in ws[1]:
+            cell.fill      = hdr_fill
+            cell.font      = hdr_font
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border    = thin_border
+
+    # Row/column limits
+    INV_MAX   = 2000   # max asset rows in Asset Inventory
+    LISTS_MAX = 500    # max rows in LISTS (supports future manual additions)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SHEET 1: LISTS  (must be created first so named references resolve)
+    # ══════════════════════════════════════════════════════════════════════════
+    ws_lists = wb.create_sheet("LISTS", 0)
+    ws_lists.append(['Category Items', 'Current Status', 'Action Taken'])
+    style_header_row(ws_lists)
+
+    for i, cat in enumerate(categories, start=2):
+        ws_lists.cell(row=i, column=1, value=cat.name)
+    for i, st in enumerate(statuses, start=2):
+        ws_lists.cell(row=i, column=2, value=st.name)
+    for i, act in enumerate(action_taken_options, start=2):
+        ws_lists.cell(row=i, column=3, value=act.name)
+
+    for col in 'ABC':
+        ws_lists.column_dimensions[col].width = 28
+
+    ws_lists['A1'].comment = Comment(
+        "Add new items here:\n"
+        "  Col A = Category  →  appears in Asset Inventory dropdown + QUANTITIES\n"
+        "  Col B = Status    →  appears in Asset Inventory status dropdown\n"
+        "  Col C = Action    →  appears in Maintenance Log action dropdown\n\n"
+        "No need to touch any other sheet — formulas pick up new entries automatically.",
+        "System"
+    )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SHEET 2: ASSET INVENTORY
+    # ══════════════════════════════════════════════════════════════════════════
+    ws_inv = wb.create_sheet("ASSET Inventory", 1)
+    ws_inv.append([
+        'Asset_ID', 'Category', 'Model / Description', 'Purchase Date',
+        'Serial Number', 'Assigned To', 'Last Known User', 'Current Status', 'Admin Comments'
+    ])
+    style_header_row(ws_inv)
+
+    # Fill existing DB data
     for asset in assets:
-        purchase_date = asset.purchase_date.strftime('%d/%m/%Y') if asset.purchase_date else ''
-        ws_inventory.append([
+        ws_inv.append([
             asset.asset_id,
             asset.category.name if asset.category else '',
             asset.model_description,
-            purchase_date,
+            asset.purchase_date.strftime('%d/%m/%Y') if asset.purchase_date else '',
             asset.serial_number,
-            asset.assigned_to.username if asset.assigned_to else '',
-            asset.last_known_user.username if asset.last_known_user else '',
+            asset.assigned_to.full_name if asset.assigned_to else '',
+            asset.last_known_person.full_name if asset.last_known_person else '',
             asset.status.name if asset.status else '',
             asset.admin_comments,
         ])
-    
-    # Add data validation (dropdowns) for Category (column B) - reference LISTS sheet
-    if categories.exists():
-        max_cat_row = len(categories) + 1
-        dv_category = DataValidation(
-            type="list",
-            formula1=f'LISTS!$A$2:$A${max_cat_row}',
-            allow_blank=True
+
+    # --- Dropdown: Category (col B) → LISTS!A2:A500 ---
+    dv_cat = DataValidation(
+        type="list", formula1=f"LISTS!$A$2:$A${LISTS_MAX}",
+        allow_blank=True, showErrorMessage=True,
+        error="Select from the list or add a new entry in the LISTS sheet (col A).",
+        errorTitle="Invalid Category",
+    )
+    ws_inv.add_data_validation(dv_cat)
+    dv_cat.add(f'B2:B{INV_MAX}')
+
+    # --- Dropdown: Status (col H) → LISTS!B2:B500 ---
+    dv_status = DataValidation(
+        type="list", formula1=f"LISTS!$B$2:$B${LISTS_MAX}",
+        allow_blank=True, showErrorMessage=True,
+        error="Select from the list or add a new entry in the LISTS sheet (col B).",
+        errorTitle="Invalid Status",
+    )
+    ws_inv.add_data_validation(dv_status)
+    dv_status.add(f'H2:H{INV_MAX}')
+
+    # --- No duplicate Asset IDs (col A) ---
+    dv_assetid = DataValidation(
+        type="custom", formula1='=COUNTIF($A$2:$A$2000,A2)=1',
+        allow_blank=True, showErrorMessage=True,
+        error="This Asset ID already exists. Each Asset ID must be unique.",
+        errorTitle="Duplicate Asset ID", errorStyle="stop",
+    )
+    ws_inv.add_data_validation(dv_assetid)
+    dv_assetid.add(f'A2:A{INV_MAX}')
+
+    # --- No duplicate Serial Number per Category (cols B + E) ---
+    dv_serial = DataValidation(
+        type="custom",
+        formula1='=COUNTIFS($B$2:$B$2000,B2,$E$2:$E$2000,E2)=1',
+        allow_blank=True, showErrorMessage=True,
+        error="This Serial Number already exists for the selected Category.",
+        errorTitle="Duplicate Serial Number", errorStyle="stop",
+    )
+    ws_inv.add_data_validation(dv_serial)
+    dv_serial.add(f'E2:E{INV_MAX}')
+
+    # --- Conditional formatting: status badge colours ---
+    STATUS_COLOURS = {
+        "In Use":            "C6EFCE",  # green
+        "Available":         "DDEBF7",  # blue
+        "Under Maintenance": "FFEB9C",  # yellow
+        "Missing":           "FFC7CE",  # red
+        "Retired":           "D3D3D3",  # grey
+    }
+    for sname, colour in STATUS_COLOURS.items():
+        ws_inv.conditional_formatting.add(
+            f'H2:H{INV_MAX}',
+            FormulaRule(
+                formula=[f'=$H2="{sname}"'],
+                fill=PatternFill(start_color=colour, end_color=colour, fill_type="solid"),
+            )
         )
-        dv_category.error = 'Please select from the dropdown list'
-        dv_category.errorTitle = 'Invalid Entry'
-        ws_inventory.add_data_validation(dv_category)
-        dv_category.add(f'B2:B{ws_inventory.max_row + 1000}')  # Allow for future entries
-    
-    # Add data validation for Current Status (column H) - reference LISTS sheet
-    if statuses.exists():
-        max_status_row = len(statuses) + 1
-        dv_status = DataValidation(
-            type="list",
-            formula1=f'LISTS!$B$2:$B${max_status_row}',
-            allow_blank=True
+
+    # --- Alternating row shading ---
+    ws_inv.conditional_formatting.add(
+        f'A2:I{INV_MAX}',
+        FormulaRule(
+            formula=['=MOD(ROW(),2)=0'],
+            fill=PatternFill(start_color="EBF1F7", end_color="EBF1F7", fill_type="solid"),
         )
-        dv_status.error = 'Please select from the dropdown list'
-        dv_status.errorTitle = 'Invalid Entry'
-        ws_inventory.add_data_validation(dv_status)
-        dv_status.add(f'H2:H{ws_inventory.max_row + 1000}')  # Allow for future entries
-    
-    # Set column widths
-    ws_inventory.column_dimensions['A'].width = 15  # Asset_ID
-    ws_inventory.column_dimensions['B'].width = 20  # Category
-    ws_inventory.column_dimensions['C'].width = 30  # Model/Description
-    ws_inventory.column_dimensions['D'].width = 15  # Purchase Date
-    ws_inventory.column_dimensions['E'].width = 20  # Serial Number
-    ws_inventory.column_dimensions['F'].width = 20  # Assigned to
-    ws_inventory.column_dimensions['G'].width = 20  # Last Known User
-    ws_inventory.column_dimensions['H'].width = 20  # Current Status
-    ws_inventory.column_dimensions['I'].width = 40  # Admin Comments
-    
-    # Freeze header row
-    ws_inventory.freeze_panes = 'A2'
-    
-    # Add note about Asset_ID uniqueness (Excel can't enforce this, but we can add a comment)
-    if ws_inventory.max_row > 1:
-        note_cell = ws_inventory['A1']
-        note_cell.comment = Comment("Each Asset_ID must be unique. Duplicate IDs will cause errors.", "System")
-    
-    # ========== SHEET 2: QUANTITIES ==========
-    ws_quantities = wb.create_sheet("QUANTITIES", 1)
-    
-    headers_quantities = ['Asset Category', 'In Use', 'Available', 'Under Maintenance', 'Missing', 'Retired', 'Grand Total']
-    ws_quantities.append(headers_quantities)
-    
-    # Style headers
-    for cell in ws_quantities[1]:
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.border = border
-    
-    # Add data rows with formulas
-    for idx, category in enumerate(categories, start=2):
-        row_num = idx
-        
-        # Category name
-        ws_quantities.cell(row=row_num, column=1, value=category.name)
-        
-        # Formulas for each status count - using proper sheet reference
-        # In Use
-        ws_quantities.cell(row=row_num, column=2).value = f'=COUNTIFS(\'ASSET Inventory\'!$B:$B,A{row_num},\'ASSET Inventory\'!$H:$H,"In Use")'
-        
-        # Available
-        ws_quantities.cell(row=row_num, column=3).value = f'=COUNTIFS(\'ASSET Inventory\'!$B:$B,A{row_num},\'ASSET Inventory\'!$H:$H,"Available")'
-        
-        # Under Maintenance
-        ws_quantities.cell(row=row_num, column=4).value = f'=COUNTIFS(\'ASSET Inventory\'!$B:$B,A{row_num},\'ASSET Inventory\'!$H:$H,"Under Maintenance")'
-        
-        # Missing
-        ws_quantities.cell(row=row_num, column=5).value = f'=COUNTIFS(\'ASSET Inventory\'!$B:$B,A{row_num},\'ASSET Inventory\'!$H:$H,"Missing")'
-        
-        # Retired
-        ws_quantities.cell(row=row_num, column=6).value = f'=COUNTIFS(\'ASSET Inventory\'!$B:$B,A{row_num},\'ASSET Inventory\'!$H:$H,"Retired")'
-        
-        # Grand Total
-        ws_quantities.cell(row=row_num, column=7).value = f'=SUM(B{row_num}:F{row_num})'
-    
-    # Add Total row
-    if categories.exists():
-        total_row = ws_quantities.max_row + 1
-        total_cell = ws_quantities.cell(row=total_row, column=1, value='TOTAL')
-        total_cell.font = Font(bold=True)
-        total_cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
-        
-        ws_quantities.cell(row=total_row, column=2).value = f'=SUM(B2:B{total_row-1})'
-        ws_quantities.cell(row=total_row, column=3).value = f'=SUM(C2:C{total_row-1})'
-        ws_quantities.cell(row=total_row, column=4).value = f'=SUM(D2:D{total_row-1})'
-        ws_quantities.cell(row=total_row, column=5).value = f'=SUM(E2:E{total_row-1})'
-        ws_quantities.cell(row=total_row, column=6).value = f'=SUM(F2:F{total_row-1})'
-        ws_quantities.cell(row=total_row, column=7).value = f'=SUM(G2:G{total_row-1})'
-    
-    # Set column widths
+    )
+
+    # Column widths & freeze
+    for col, width in zip('ABCDEFGHI', [15, 20, 32, 14, 20, 22, 22, 20, 40]):
+        ws_inv.column_dimensions[col].width = width
+    ws_inv.freeze_panes = 'A2'
+
+    ws_inv['F1'].comment = Comment(
+        "AUTO-STATUS: When you fill 'Assigned To' (this column), add a VBA macro\n"
+        "(see the README sheet) to automatically set 'Current Status' to 'In Use'.\n\n"
+        "MAINTENANCE: Any row you set to 'Under Maintenance' automatically appears\n"
+        "in the live section of the MAINTENANCE LOG sheet.",
+        "System"
+    )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SHEET 3: QUANTITIES
+    # Formula per row reads from LISTS!A{r} so new categories auto-appear.
+    # ══════════════════════════════════════════════════════════════════════════
+    ws_qty = wb.create_sheet("QUANTITIES", 2)
+    ws_qty.append(['Asset Category', 'In Use', 'Available', 'Under Maintenance', 'Missing', 'Retired', 'Grand Total'])
+    style_header_row(ws_qty)
+
+    status_names = ["In Use", "Available", "Under Maintenance", "Missing", "Retired"]
+
+    for r in range(2, LISTS_MAX + 1):
+        cat_ref = f"LISTS!$A${r}"
+        # Col A: pull category name from LISTS; blank if LISTS row is empty
+        ws_qty.cell(row=r, column=1).value = f'=IFERROR(IF({cat_ref}="","",{cat_ref}),"")'
+        # Cols B-F: COUNTIFS per status  ← live from Asset Inventory
+        for col_idx, sname in enumerate(status_names, start=2):
+            ws_qty.cell(row=r, column=col_idx).value = (
+                f'=IFERROR(IF({cat_ref}="","",COUNTIFS('
+                f"'ASSET Inventory'!$B:$B,{cat_ref},"
+                f"'ASSET Inventory'!$H:$H,\"{sname}\")),\"\")"
+            )
+        # Col G: Grand Total
+        ws_qty.cell(row=r, column=7).value = (
+            f'=IFERROR(IF({cat_ref}="","",SUM(B{r}:F{r})),"")'
+        )
+
+    # TOTAL summary row
+    total_row = LISTS_MAX + 1
+    total_fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+    ws_qty.cell(row=total_row, column=1, value='TOTAL')
     for col in range(1, 8):
-        ws_quantities.column_dimensions[get_column_letter(col)].width = 18
-    
-    # Format number cells
-    for row in range(2, ws_quantities.max_row + 1):
-        for col in range(2, 8):  # Columns B-G
-            cell = ws_quantities.cell(row=row, column=col)
-            cell.number_format = '0'  # Integer format
-            cell.alignment = Alignment(horizontal="center")
-    
-    # ========== SHEET 3: MAINTENANCE LOG ==========
-    ws_maintenance = wb.create_sheet("MAINTENANCE LOG", 2)
-    
-    headers_maintenance = [
-        'Timestamp', 'Asset ID', 'Describe Issue', 'Action Taken',
-        'Date Reported', 'Cost of Repair', 'Date Completed'
-    ]
-    ws_maintenance.append(headers_maintenance)
-    
-    # Style headers
-    for cell in ws_maintenance[1]:
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.border = border
-    
-    # Get maintenance logs
-    maintenance_logs = MaintenanceLog.objects.select_related('asset', 'action_taken').order_by('-timestamp')
-    
+        c = ws_qty.cell(row=total_row, column=col)
+        c.font   = Font(bold=True)
+        c.fill   = total_fill
+        c.border = thin_border
+    for col in range(2, 8):
+        ws_qty.cell(row=total_row, column=col).value = (
+            f'=SUM({get_column_letter(col)}2:{get_column_letter(col)}{LISTS_MAX})'
+        )
+
+    # Number formatting & alignment for data cells
+    for r in range(2, total_row + 1):
+        for col in range(2, 8):
+            cell = ws_qty.cell(row=r, column=col)
+            cell.number_format = '0'
+            cell.alignment     = Alignment(horizontal="center")
+    for col in range(1, 8):
+        ws_qty.column_dimensions[get_column_letter(col)].width = 20
+    ws_qty.freeze_panes = 'A2'
+
+    ws_qty['A1'].comment = Comment(
+        "This sheet is fully automatic.\n"
+        "• Counts update instantly when you edit the ASSET Inventory sheet.\n"
+        "• New categories added to LISTS (col A) auto-appear here as new rows.\n"
+        "• Press F9 to force a recalculation if values look stale.",
+        "System"
+    )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SHEET 4: MAINTENANCE LOG
+    # Part 1: Actual DB maintenance log records
+    # Part 2: Assets currently Under Maintenance (direct DB query — no CSE needed)
+    # ══════════════════════════════════════════════════════════════════════════
+    ws_maint = wb.create_sheet("MAINTENANCE LOG", 3)
+    ws_maint.append([
+        'Timestamp', 'Asset ID', 'Category', 'Describe Issue',
+        'Action Taken', 'Date Reported', 'Cost of Repair', 'Date Completed', 'Status'
+    ])
+    style_header_row(ws_maint)
+
+    # Part 1 – actual MaintenanceLog DB records
+    maintenance_logs = MaintenanceLog.objects.select_related(
+        'asset', 'asset__category', 'action_taken'
+    ).order_by('-timestamp')
+    db_count = 0
     for log in maintenance_logs:
-        timestamp = log.timestamp.strftime('%d/%m/%Y %H:%M') if log.timestamp else ''
-        date_reported = log.date_reported.strftime('%d/%m/%Y') if log.date_reported else ''
-        date_completed = log.date_completed.strftime('%d/%m/%Y') if log.date_completed else ''
-        
-        ws_maintenance.append([
-            timestamp,
+        ws_maint.append([
+            log.timestamp.strftime('%d/%m/%Y %H:%M') if log.timestamp else '',
             log.asset.asset_id if log.asset else '',
+            log.asset.category.name if log.asset and log.asset.category else '',
             log.description,
             log.action_taken.name if log.action_taken else '',
-            date_reported,
-            log.cost_of_repair if log.cost_of_repair else '',
-            date_completed,
+            log.date_reported.strftime('%d/%m/%Y') if log.date_reported else '',
+            float(log.cost_of_repair) if log.cost_of_repair else '',
+            log.date_completed.strftime('%d/%m/%Y') if log.date_completed else '',
+            log.maintenance_status,
         ])
-    
-    # Add data validation for Action Taken (column D) - reference LISTS sheet
-    if action_taken_options.exists():
-        # Use dynamic reference to LISTS sheet column C
-        max_list_row = len(action_taken_options) + 1
-        dv_action = DataValidation(
-            type="list",
-            formula1=f'LISTS!$C$2:$C${max_list_row}',
-            allow_blank=True
+        db_count += 1
+
+    # Part 2 – assets currently Under Maintenance (pulled from Asset DB directly)
+    from assets.models import Asset as AssetModel
+    under_maint_assets = AssetModel.objects.filter(
+        status__name='Under Maintenance', is_deleted=False
+    ).select_related('category', 'status', 'assigned_to', 'department').order_by('asset_id')
+
+    if under_maint_assets.exists():
+        sep_row = ws_maint.max_row + 2
+        sep_cell = ws_maint.cell(
+            row=sep_row, column=1,
+            value="↓  Assets currently Under Maintenance (snapshot at export time)"
         )
-        dv_action.error = 'Please select from the dropdown list'
-        dv_action.errorTitle = 'Invalid Entry'
-        ws_maintenance.add_data_validation(dv_action)
-        if ws_maintenance.max_row > 1:
-            dv_action.add(f'D2:D{ws_maintenance.max_row + 100}')  # Allow for future entries
-    
-    # Set column widths
-    ws_maintenance.column_dimensions['A'].width = 18  # Timestamp
-    ws_maintenance.column_dimensions['B'].width = 15  # Asset ID
-    ws_maintenance.column_dimensions['C'].width = 40  # Describe Issue
-    ws_maintenance.column_dimensions['D'].width = 20  # Action Taken
-    ws_maintenance.column_dimensions['E'].width = 15  # Date Reported
-    ws_maintenance.column_dimensions['F'].width = 15  # Cost of Repair
-    ws_maintenance.column_dimensions['G'].width = 15  # Date Completed
-    
-    # ========== SHEET 4: LISTS (Dropdown Source Data) ==========
-    ws_lists = wb.create_sheet("LISTS", 3)
-    
-    headers_lists = ['Category Items', 'Current status', 'Action Taken']
-    ws_lists.append(headers_lists)
-    
-    # Style headers
-    for cell in ws_lists[1]:
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.border = border
-    
-    # Get max length for each column
-    max_len = max(len(categories), len(statuses), len(action_taken_options))
-    
-    # Fill Category Items (column A)
-    for idx, category in enumerate(categories, start=2):
-        ws_lists.cell(row=idx, column=1, value=category.name)
-    
-    # Fill Current status (column B)
-    for idx, status in enumerate(statuses, start=2):
-        ws_lists.cell(row=idx, column=2, value=status.name)
-    
-    # Fill Action Taken (column C)
-    for idx, action in enumerate(action_taken_options, start=2):
-        ws_lists.cell(row=idx, column=3, value=action.name)
-    
-    # Set column widths
-    ws_lists.column_dimensions['A'].width = 25
-    ws_lists.column_dimensions['B'].width = 25
-    ws_lists.column_dimensions['C'].width = 25
-    
-    # ========== SHEET 5: Past Users ==========
-    ws_past_users = wb.create_sheet("Past Users", 4)
-    
-    headers_past_users = ['Asset_ID', 'User', 'Start Date', 'End Date']
-    ws_past_users.append(headers_past_users)
-    
-    # Style headers
-    for cell in ws_past_users[1]:
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center", vertical="center")
-        cell.border = border
-    
-    # Get assignment history
-    assignment_history = AssignmentHistory.objects.select_related('asset', 'user').order_by('-start_date')
-    
-    for assignment in assignment_history:
-        start_date = assignment.start_date.strftime('%d/%m/%Y') if assignment.start_date else ''
-        end_date = assignment.end_date.strftime('%d/%m/%Y') if assignment.end_date else ''
-        
-        ws_past_users.append([
-            assignment.asset.asset_id if assignment.asset else '',
-            assignment.user.username if assignment.user else '',
-            start_date,
-            end_date,
+        sep_cell.font = Font(bold=True, color="FF0000")
+        ws_maint.merge_cells(
+            start_row=sep_row, start_column=1, end_row=sep_row, end_column=9
+        )
+        for asset_um in under_maint_assets:
+            ws_maint.append([
+                '',                                          # Timestamp (n/a for snapshot)
+                asset_um.asset_id,
+                asset_um.category.name if asset_um.category else '',
+                asset_um.model_description,                  # Describe Issue placeholder
+                '',                                          # Action Taken (to be filled)
+                '',                                          # Date Reported
+                '',                                          # Cost
+                '',                                          # Date Completed
+                'Under Maintenance',
+            ])
+
+    total_maint_rows = ws_maint.max_row
+
+    # Action Taken dropdown (col E) → LISTS!C2:C500
+    if action_taken_options:
+        dv_action = DataValidation(
+            type="list", formula1=f"LISTS!$C$2:$C${LISTS_MAX}",
+            allow_blank=True, showErrorMessage=True,
+            error="Select from the list or add to LISTS sheet col C.",
+            errorTitle="Invalid Action",
+        )
+        ws_maint.add_data_validation(dv_action)
+        dv_action.add(f'E2:E{total_maint_rows + 100}')
+
+    for col, width in zip('ABCDEFGHI', [18, 14, 18, 40, 22, 14, 14, 14, 18]):
+        ws_maint.column_dimensions[col].width = width
+    ws_maint.freeze_panes = 'A2'
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SHEET 5: PAST USERS
+    # ══════════════════════════════════════════════════════════════════════════
+    ws_past = wb.create_sheet("Past Users", 4)
+    ws_past.append(['Asset_ID', 'User', 'Start Date', 'End Date'])
+    style_header_row(ws_past)
+
+    for a in AssignmentHistory.objects.select_related('asset', 'user').order_by('-start_date'):
+        ws_past.append([
+            a.asset.asset_id if a.asset else '',
+            (a.user.get_full_name() or a.user.username) if a.user else '',
+            a.start_date.strftime('%d/%m/%Y') if a.start_date else '',
+            a.end_date.strftime('%d/%m/%Y') if a.end_date else 'Current',
         ])
-    
-    # Set column widths
-    ws_past_users.column_dimensions['A'].width = 15  # Asset_ID
-    ws_past_users.column_dimensions['B'].width = 25  # User
-    ws_past_users.column_dimensions['C'].width = 15  # Start Date
-    ws_past_users.column_dimensions['D'].width = 15  # End Date
-    
-    # Create response
+
+    for col, width in zip('ABCD', [15, 28, 15, 15]):
+        ws_past.column_dimensions[col].width = width
+    ws_past.freeze_panes = 'A2'
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SHEET 6: README – instructions + VBA macro code
+    # ══════════════════════════════════════════════════════════════════════════
+    ws_readme = wb.create_sheet("📋 README", 5)
+    ws_readme.column_dimensions['A'].width = 95
+
+    readme_content = [
+        ("IT Asset Inventory – Excel Export Guide", True, 14, "366092"),
+        ("", False, 11, None),
+        ("WHAT IS AUTOMATIC (no setup needed)", True, 11, None),
+        ("  • Category / Status / Action Taken dropdowns are linked to the LISTS sheet.", False, 11, None),
+        ("  • Add a new Category in LISTS col A → it instantly appears in the Asset Inventory", False, 11, None),
+        ("    Category dropdown AND shows as a new row in QUANTITIES.", False, 11, None),
+        ("  • QUANTITIES counts update live when you edit the Asset Inventory sheet.", False, 11, None),
+        ("  • MAINTENANCE LOG bottom section auto-lists every asset with status", False, 11, None),
+        ('    "Under Maintenance" from the Asset Inventory sheet (press F9 to refresh).', False, 11, None),
+        ("", False, 11, None),
+        ("VALIDATION RULES (enforced by Excel stop errors)", True, 11, None),
+        ("  • Duplicate Asset_ID (col A) → Excel will block the entry.", False, 11, None),
+        ("  • Duplicate Serial Number within the same Category (col E, keyed on col B)", False, 11, None),
+        ("    → Excel will block the entry.", False, 11, None),
+        ("  • Status and Category must come from the LISTS sheet.", False, 11, None),
+        ("", False, 11, None),
+        ("AUTO-STATUS MACRO (one-time 2-minute setup)", True, 11, "FF0000"),
+        ("This makes Status auto-change to 'In Use' when you fill the 'Assigned To' column.", False, 11, None),
+        ("", False, 11, None),
+        ("  Step 1: Press Alt+F11 to open the VBA editor.", False, 11, None),
+        ("  Step 2: In the left panel, expand VBAProject → Microsoft Excel Objects.", False, 11, None),
+        ("  Step 3: Double-click the sheet named 'ASSET Inventory'.", False, 11, None),
+        ("  Step 4: Paste the code below into the code window:", False, 11, None),
+        ("", False, 11, None),
+        ("     Private Sub Worksheet_Change(ByVal Target As Range)", False, 11, None),
+        ("         ' Col F = Assigned To,  Col H = Current Status", False, 11, None),
+        ("         If Target.Column = 6 And Target.Row > 1 Then", False, 11, None),
+        ("             Application.EnableEvents = False", False, 11, None),
+        ("             If Trim(Target.Value) <> \"\" Then", False, 11, None),
+        ("                 Cells(Target.Row, 8).Value = \"In Use\"", False, 11, None),
+        ("             End If", False, 11, None),
+        ("             Application.EnableEvents = True", False, 11, None),
+        ("         End If", False, 11, None),
+        ("     End Sub", False, 11, None),
+        ("", False, 11, None),
+        ("  Step 5: Close the VBA editor (Alt+Q).", False, 11, None),
+        ('  Step 6: Save the file as "Excel Macro-Enabled Workbook (*.xlsm)".', False, 11, None),
+        ("", False, 11, None),
+        ("TIPS", True, 11, None),
+        ("  • Press F9 to force-recalculate all formulas.", False, 11, None),
+        ("  • Do NOT delete the LISTS sheet — all dropdowns depend on it.", False, 11, None),
+        ("  • QUANTITIES has formulas for 500 rows to support future categories.", False, 11, None),
+        ("  • Status colour coding: Green=In Use, Blue=Available,", False, 11, None),
+        ("    Yellow=Under Maintenance, Red=Missing, Grey=Retired.", False, 11, None),
+    ]
+
+    for text, bold, size, colour in readme_content:
+        ws_readme.append([text])
+        row = ws_readme.max_row
+        f = Font(bold=bold, size=size)
+        if colour:
+            f = Font(bold=bold, size=size, color=colour)
+        ws_readme.cell(row=row, column=1).font = f
+
+    # ── HTTP response ──────────────────────────────────────────────────────────
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = 'attachment; filename="Inventory_Export.xlsx"'
+    response['Content-Disposition'] = 'attachment; filename="IT_Inventory_Export.xlsx"'
     wb.save(response)
     return response
 
@@ -340,25 +451,25 @@ def export_assets_pdf(assets):
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     elements = []
-    
+
     styles = getSampleStyleSheet()
     title = Paragraph("Assets Export", styles['Title'])
     elements.append(title)
     elements.append(Spacer(1, 0.2*inch))
-    
+
     # Table data
     data = [['Asset ID', 'Category', 'Model', 'Serial', 'Assigned To', 'Status']]
-    
+
     for asset in assets[:100]:  # Limit to 100 for PDF
         data.append([
             asset.asset_id,
             asset.category.name if asset.category else '',
             asset.model_description[:30],
             asset.serial_number[:20],
-            asset.assigned_to.username if asset.assigned_to else 'Unassigned',
+            asset.assigned_to.full_name if asset.assigned_to else 'Unassigned',
             asset.status.name if asset.status else '',
         ])
-    
+
     # Create table
     table = Table(data)
     table.setStyle(TableStyle([
@@ -372,10 +483,10 @@ def export_assets_pdf(assets):
         ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ('FONTSIZE', (0, 1), (-1, -1), 8),
     ]))
-    
+
     elements.append(table)
     doc.build(elements)
-    
+
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="assets_export.pdf"'
     response.write(buffer.getvalue())

@@ -22,7 +22,7 @@
                         </span>
                     </div>
                 </div>
-                
+
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <strong>Category:</strong><br>
@@ -33,7 +33,7 @@
                         {{ asset.serial_number }}
                     </div>
                 </div>
-                
+
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <strong>Model/Description:</strong><br>
@@ -44,25 +44,31 @@
                         {{ asset.purchase_date|date:"M d, Y"|default:"Not set" }}
                     </div>
                 </div>
-                
+
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <strong>Assigned To:</strong><br>
-                        {{ asset.assigned_to.username|default:"Unassigned" }}
+                        {% if asset.assigned_to %}
+                        <a href="{% url 'users:person_assets' asset.assigned_to.id %}" class="text-decoration-none">
+                            <i class="bi bi-person me-1"></i>{{ asset.assigned_to.full_name }}
+                        </a>
+                        {% else %}
+                        <span class="text-muted">Unassigned</span>
+                        {% endif %}
                     </div>
                     <div class="col-md-6">
                         <strong>Department:</strong><br>
                         {{ asset.department.name|default:"Not set" }}
                     </div>
                 </div>
-                
+
                 {% if asset.admin_comments %}
                 <div class="mb-3">
                     <strong>Admin Comments:</strong><br>
                     <p class="text-muted">{{ asset.admin_comments }}</p>
                 </div>
                 {% endif %}
-                
+
                 {% if user.profile.role == 'super_admin' or user.profile.role == 'admin' or user.is_superuser %}
                 <div class="mt-4">
                     <a href="{% url 'assets:update' asset.pk %}" class="btn btn-warning">
@@ -72,7 +78,7 @@
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- Assignment History -->
         <div class="card mt-4">
             <div class="card-header">
@@ -83,7 +89,7 @@
                     <table class="table table-sm">
                         <thead>
                             <tr>
-                                <th>User</th>
+                                <th>Assigned To</th>
                                 <th>Start Date</th>
                                 <th>End Date</th>
                             </tr>
@@ -91,7 +97,15 @@
                         <tbody>
                             {% for assignment in assignment_history %}
                             <tr>
-                                <td>{{ assignment.user.username|default:"Unassigned" }}</td>
+                                <td>
+                                    {% if assignment.person %}
+                                    {{ assignment.person.full_name }}
+                                    {% elif assignment.department %}
+                                    {{ assignment.department.name }} (Dept)
+                                    {% else %}
+                                    Unassigned
+                                    {% endif %}
+                                </td>
                                 <td>{{ assignment.start_date|date:"M d, Y H:i" }}</td>
                                 <td>{{ assignment.end_date|date:"M d, Y H:i"|default:"Current" }}</td>
                             </tr>
@@ -105,7 +119,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Maintenance Logs -->
         <div class="card mt-4">
             <div class="card-header">
@@ -127,7 +141,8 @@
                             <tr>
                                 <td>{{ log.date_reported|date:"M d, Y" }}</td>
                                 <td>
-                                    <span class="badge bg-{% if log.maintenance_status == 'Open' %}warning{% else %}success{% endif %}">
+                                    <span
+                                        class="badge bg-{% if log.maintenance_status == 'Open' %}warning{% else %}success{% endif %}">
                                         {{ log.maintenance_status }}
                                     </span>
                                 </td>
@@ -145,7 +160,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-4">
         <!-- QR Code -->
         {% if asset.qr_code %}
@@ -158,7 +173,7 @@
             </div>
         </div>
         {% endif %}
-        
+
         <!-- Activity Log -->
         <div class="card mt-4">
             <div class="card-header">

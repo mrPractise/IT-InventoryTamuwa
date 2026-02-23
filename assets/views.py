@@ -24,7 +24,8 @@ def asset_list(request):
             Q(asset_id__icontains=search_query) |
             Q(serial_number__icontains=search_query) |
             Q(model_description__icontains=search_query) |
-            Q(assigned_to__username__icontains=search_query)
+            Q(assigned_to__first_name__icontains=search_query) |
+            Q(assigned_to__last_name__icontains=search_query)
         )
     
     # Filters

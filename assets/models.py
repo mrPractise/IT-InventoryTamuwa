@@ -57,6 +57,32 @@ class StatusOption(models.Model):
         return self.name
 
 
+class Person(models.Model):
+    """Simplified model for people who receive assets (no credentials)"""
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='people'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['first_name', 'last_name']
+        verbose_name_plural = "People"
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+
 class Asset(models.Model):
     """Core Asset model"""
     asset_id = models.CharField(max_length=50, unique=True, db_index=True)
@@ -65,7 +91,7 @@ class Asset(models.Model):
     serial_number = models.CharField(max_length=100, db_index=True)
     purchase_date = models.DateField(null=True, blank=True)
     assigned_to = models.ForeignKey(
-        User, 
+        Person, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
@@ -79,8 +105,8 @@ class Asset(models.Model):
         blank=True,
         related_name='assets'
     )
-    last_known_user = models.ForeignKey(
-        User,
+    last_known_person = models.ForeignKey(
+        Person,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -101,6 +127,7 @@ class Asset(models.Model):
             models.Index(fields=['serial_number']),
             models.Index(fields=['status']),
             models.Index(fields=['assigned_to']),
+            models.Index(fields=['department']),
             models.Index(fields=['is_deleted']),
             models.Index(fields=['category', 'serial_number']),  # For unique constraint
         ]
@@ -114,12 +141,15 @@ class Asset(models.Model):
 
     def clean(self):
         """Validate business rules"""
-        if self.assigned_to and self.status.name != 'In Use':
+        if not self.status_id:
+            return  # Status not set yet; FK validation will handle it
+
+        if (self.assigned_to or self.department) and self.status.name != 'In Use':
             # Status will be auto-updated by signal, but validate here too
             pass
-        
-        if not self.assigned_to and self.status.name == 'In Use':
-            raise ValidationError("Cannot set status to 'In Use' without assigning to a user.")
+
+        if not self.assigned_to and not self.department and self.status.name == 'In Use':
+            raise ValidationError("Cannot set status to 'In Use' without assigning to a person or department.")
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -132,7 +162,8 @@ class Asset(models.Model):
 class AssignmentHistory(models.Model):
     """Track asset assignment history"""
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='assignment_history')
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='assignment_history')
+    person = models.ForeignKey(Person, on_delete=models.SET_NULL, null=True, blank=True, related_name='assignment_history')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='assignment_history')
     start_date = models.DateTimeField(default=timezone.now)
     end_date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
@@ -143,11 +174,13 @@ class AssignmentHistory(models.Model):
         verbose_name_plural = "Assignment Histories"
         indexes = [
             models.Index(fields=['asset', 'start_date']),
-            models.Index(fields=['user', 'start_date']),
+            models.Index(fields=['person', 'start_date']),
+            models.Index(fields=['department', 'start_date']),
         ]
 
     def __str__(self):
-        return f"{self.asset.asset_id} -> {self.user.username if self.user else 'Unassigned'}"
+        target = self.person.full_name if self.person else (self.department.name if self.department else 'Unassigned')
+        return f"{self.asset.asset_id} -> {target}"
 
 
 class ActivityLog(models.Model):

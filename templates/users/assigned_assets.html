@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Assigned Assets - {{ person.full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .person-hero {
+        background: linear-gradient(135deg, #1d4ed8 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 28px 30px;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 20px rgba(29, 78, 216, .25);
+    }
+
+    .person-avatar-lg {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, .2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        font-weight: 700;
+        flex-shrink: 0;
+        border: 3px solid rgba(255, 255, 255, .4);
+    }
+
+    .person-hero h3 {
+        margin: 0 0 4px;
+        font-weight: 700;
+    }
+
+    .person-hero small {
+        opacity: .8;
+    }
+
+    .stat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, .15);
+        border-radius: 20px;
+        padding: 5px 14px;
+        font-size: .85rem;
+        margin-top: 8px;
+    }
+
+    .status-chip {
+        padding: 3px 12px;
+        border-radius: 20px;
+        font-size: .78rem;
+        font-weight: 600;
+    }
+
+    .chip-in-use {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .chip-available {
+        background: #dbeafe;
+        color: #1e3a8a;
+    }
+
+    .chip-maintenance {
+        background: #fef3c7;
+        color: #92400e;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'users:directory' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back to Directory
+    </a>
+</div>
+
+<div class="person-hero">
+    <div class="person-avatar-lg">
+        {{ person.first_name|first }}{{ person.last_name|first }}
+    </div>
+    <div>
+        <h3>{{ person.full_name }}</h3>
+        <p class="mb-0 small opacity-75">
+            <i class="bi bi-building me-1"></i> {{ person.department.name|default:"No Department" }}
+        </p>
+        <div class="stat-pill">
+            <i class="bi bi-box-seam"></i> {{ assets.count }} Asset{{ assets.count|pluralize }} Assigned
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Assigned Assets</h5>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-muted small text-uppercase">
+                <tr>
+                    <th class="ps-4">Asset ID</th>
+                    <th>Category</th>
+                    <th>Model / Description</th>
+                    <th>Serial Number</th>
+                    <th>Status</th>
+                    <th class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for asset in assets %}
+                <tr>
+                    <td class="ps-4"><span class="fw-bold text-primary">{{ asset.asset_id }}</span></td>
+                    <td><span class="badge bg-light text-dark border">{{ asset.category.name }}</span></td>
+                    <td>{{ asset.model_description }}</td>
+                    <td class="text-muted small font-monospace">{{ asset.serial_number }}</td>
+                    <td>
+                        <span
+                            class="status-chip {% if asset.status.name == 'In Use' %}chip-in-use{% elif asset.status.name == 'Available' %}chip-available{% elif asset.status.name == 'Under Maintenance' %}chip-maintenance{% else %}bg-light text-dark{% endif %}">
+                            {{ asset.status.name }}
+                        </span>
+                    </td>
+                    <td class="text-end pe-4">
+                        <a href="{% url 'assets:update' asset.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox display-4 d-block mb-3 opacity-25"></i>
+                        No assets assigned to this person.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

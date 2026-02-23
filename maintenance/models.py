@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from assets.models import Asset
+from assets.models import Asset, Person
 
 
 class ActionTakenOption(models.Model):
@@ -41,8 +41,8 @@ class MaintenanceLog(models.Model):
     )
     cost_of_repair = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     maintenance_status = models.CharField(max_length=10, choices=MAINTENANCE_STATUS_CHOICES, default='Open')
-    previous_assigned_user = models.ForeignKey(
-        User,
+    previous_assigned_person = models.ForeignKey(
+        Person,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

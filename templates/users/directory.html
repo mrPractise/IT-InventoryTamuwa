@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+
+{% block page_title %}People & Departments{% endblock %}
+
+{% block extra_css %}
+<style>
+    .section-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #2c3e50;
+        letter-spacing: .5px;
+        border-left: 4px solid #3498db;
+        padding-left: 12px;
+        margin-bottom: 1.2rem;
+    }
+
+    /* ── Person / Department card ── */
+    .dir-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, .08);
+        padding: 22px 20px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        transition: transform .2s, box-shadow .2s;
+        text-decoration: none;
+        color: inherit;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .dir-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(52, 152, 219, .18);
+        color: inherit;
+    }
+
+    .dir-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3498db, #764ba2);
+    }
+
+    /* Avatar circle */
+    .dir-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.7rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+        flex-shrink: 0;
+    }
+
+    .avatar-user {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .avatar-dept {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .dir-name {
+        font-weight: 600;
+        font-size: .95rem;
+        margin-bottom: 4px;
+        word-break: break-word;
+    }
+
+    .dir-meta {
+        font-size: .78rem;
+        color: #6b7280;
+        margin-bottom: 10px;
+    }
+
+    .dir-badge {
+        font-size: .75rem;
+        font-weight: 600;
+        padding: 3px 12px;
+        border-radius: 20px;
+    }
+
+    .badge-user {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .badge-dept {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-zero {
+        background: #f3f4f6;
+        color: #9ca3af;
+    }
+
+    /* Search bar */
+    .search-input {
+        border-radius: 8px;
+        border: 1.5px solid #e5e7eb;
+        padding: 8px 14px;
+        font-size: .9rem;
+        transition: border-color .2s;
+        width: 100%;
+        max-width: 340px;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, .15);
+    }
+
+    /* Tab pills */
+    .tab-section {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 1.5rem;
+        align-items: center;
+    }
+
+    .tab-pill {
+        padding: 6px 20px;
+        border-radius: 20px;
+        font-size: .85rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all .2s;
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .tab-pill.active,
+    .tab-pill:hover {
+        background: #3498db;
+        color: #fff;
+        border-color: #3498db;
+    }
+
+    .tab-content-section {
+        display: none;
+    }
+
+    .tab-content-section.active {
+        display: block;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #9ca3af;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <h5 class="mb-0 fw-bold"><i class="bi bi-people-fill me-2 text-primary"></i>People &amp; Departments</h5>
+        <small class="text-muted">Click a person or department to see their assigned assets</small>
+    </div>
+    <input type="text" class="search-input" id="directorySearch" placeholder="🔍  Search people or departments…"
+        oninput="filterDirectory()">
+</div>
+
+<!-- Tabs -->
+<div class="tab-section">
+    <button class="tab-pill active" onclick="switchTab('people', this)">
+        <i class="bi bi-person-check me-1"></i> People
+        <span class="ms-1 badge bg-primary bg-opacity-10 text-primary">{{ people.count }}</span>
+    </button>
+    <button class="tab-pill" onclick="switchTab('departments', this)">
+        <i class="bi bi-building me-1"></i> Departments
+        <span class="ms-1 badge bg-success bg-opacity-10 text-success">{{ departments.count }}</span>
+    </button>
+    <button class="tab-pill" onclick="switchTab('all', this)">
+        <i class="bi bi-grid me-1"></i> All
+    </button>
+
+    {% if user.is_superuser or user.profile.is_admin %}
+    <div class="ms-auto d-flex gap-2">
+        <a href="{% url 'users:add_person' %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-person-plus me-1"></i> Add Person
+        </a>
+        <a href="{% url 'users:add_department' %}" class="btn btn-sm btn-success">
+            <i class="bi bi-building-add me-1"></i> Add Dept
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- PEOPLE section -->
+<div id="people-section" class="tab-content active">
+    <div class="row g-4" id="people-list">
+        {% for person in people %}
+        <div class="col-md-6 col-lg-4 directory-item person-card" data-name="{{ person.full_name }}"
+            data-dept="{{ person.department.name|default:'No Department' }}">
+            <div class="card h-100 person-card-hover"
+                onclick="window.location.href='{% url 'users:person_assets' person.id %}'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-3"
+                            style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: 600;">
+                            {{ person.first_name|first }}{{ person.last_name|first }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1 text-truncate">{{ person.full_name }}</h5>
+                            <p class="text-muted mb-2 small">
+                                <i class="bi bi-building me-1"></i> {{ person.department.name|default:"No Department" }}
+                            </p>
+                            <div class="d-flex align-items-center">
+                                <span
+                                    class="badge {% if person.assigned_count > 0 %}bg-primary{% else %}bg-secondary{% endif %} bg-opacity-10 {% if person.assigned_count > 0 %}text-primary{% else %}text-secondary{% endif %} rounded-pill">
+                                    <i class="bi bi-box-seam me-1"></i> {{ person.assigned_count }} Assets
+                                </span>
+                                <i class="bi bi-chevron-right ms-auto text-muted small"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-people text-muted display-1"></i>
+            <p class="mt-3 text-muted">No people found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- DEPARTMENTS section -->
+<div id="departments-section" class="tab-content" style="display: none;">
+    <div class="row g-4" id="dept-list">
+        {% for dept in departments %}
+        <div class="col-md-6 col-lg-4 directory-item department-card" data-name="{{ dept.name|lower }}">
+            <div class="card h-100 person-card-hover"
+                onclick="window.location.href='{% url 'users:department_assets' dept.id %}'">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center me-3"
+                            style="width: 60px; height: 60px; font-size: 1.5rem; font-weight: 600;">
+                            <i class="bi bi-building-fill"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="card-title mb-1 text-truncate">{{ dept.name }}</h5>
+                            <p class="text-muted mb-2 small">{{ dept.description|truncatechars:50|default:"Organization
+                                department" }}</p>
+                            <div class="d-flex align-items-center">
+                                <span
+                                    class="badge {% if dept.asset_count > 0 %}bg-success{% else %}bg-secondary{% endif %} bg-opacity-10 {% if dept.asset_count > 0 %}text-success{% else %}text-secondary{% endif %} rounded-pill">
+                                    <i class="bi bi-box-seam me-1"></i> {{ dept.asset_count }} Total Assets
+                                </span>
+                                <i class="bi bi-chevron-right ms-auto text-muted small"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-building text-muted display-1"></i>
+            <p class="mt-3 text-muted">No departments found.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ALL combined section (hidden initially) -->
+<div id="all-section" class="tab-content" style="display: none;">
+    <div class="row g-4" id="all-list">
+        <!-- populated by filterDirectory() or shown similarly -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchTab(tab, element) {
+        document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+        element.classList.add('active');
+
+        document.querySelectorAll('.tab-content').forEach(c => {
+            c.style.display = 'none';
+            c.classList.remove('active');
+        });
+
+        const activeSection = document.getElementById(tab + '-section');
+        if (activeSection) {
+            activeSection.style.display = 'block';
+            activeSection.classList.add('active');
+        }
+
+        // If "All" tab is clicked, show both sections
+        if (tab === 'all') {
+            const allList = document.getElementById('all-list');
+            allList.innerHTML = '';
+
+            // Add people
+            document.querySelectorAll('.person-card').forEach(card => {
+                const clone = card.cloneNode(true);
+                clone.style.display = 'block';
+                allList.appendChild(clone);
+            });
+
+            // Add departments
+            document.querySelectorAll('.department-card').forEach(card => {
+                const clone = card.cloneNode(true);
+                clone.style.display = 'block';
+                allList.appendChild(clone);
+            });
+        }
+    }
+
+    function filterDirectory() {
+        const query = document.getElementById('directorySearch').value.toLowerCase();
+        const items = document.querySelectorAll('.directory-item');
+
+        items.forEach(item => {
+            const name = item.getAttribute('data-name').toLowerCase();
+            const dept = (item.getAttribute('data-dept') || '').toLowerCase();
+
+            if (name.includes(query) || dept.includes(query)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,28 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}AssetCore - Inventory Management{% endblock %}</title>
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
+
     <style>
         :root {
             --sidebar-width: 250px;
             --header-height: 60px;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f8f9fa;
         }
-        
+
         .sidebar {
             position: fixed;
             top: 0;
@@ -34,9 +35,9 @@
             padding-top: var(--header-height);
             z-index: 1000;
             overflow-y: auto;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
         }
-        
+
         .sidebar-brand {
             position: fixed;
             top: 0;
@@ -52,61 +53,61 @@
             z-index: 1001;
             border-bottom: 3px solid #3498db;
         }
-        
+
         .sidebar-menu {
             list-style: none;
             padding: 0;
             margin: 0;
         }
-        
+
         .sidebar-menu li {
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .sidebar-menu a {
             display: flex;
             align-items: center;
             padding: 15px 20px;
-            color: rgba(255,255,255,0.8);
+            color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             transition: all 0.3s;
         }
-        
+
         .sidebar-menu a:hover,
         .sidebar-menu a.active {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             padding-left: 25px;
         }
-        
+
         .sidebar-menu i {
             margin-right: 10px;
             width: 20px;
         }
-        
+
         .main-content {
             margin-left: var(--sidebar-width);
             padding: 20px;
             min-height: 100vh;
         }
-        
+
         .top-header {
             background: white;
             padding: 15px 20px;
             margin: -20px -20px 20px -20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .card {
             border: none;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
         }
-        
+
         .card-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -114,55 +115,75 @@
             padding: 15px 20px;
             font-weight: 600;
         }
-        
+
         .stat-card {
             background: white;
             border-radius: 10px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s;
         }
-        
+
         .stat-card:hover {
             transform: translateY(-5px);
         }
-        
+
         .stat-card .stat-icon {
             font-size: 2.5rem;
             opacity: 0.8;
         }
-        
+
         .status-badge {
             padding: 5px 12px;
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 500;
         }
-        
-        .status-in-use { background: #d4edda; color: #155724; }
-        .status-available { background: #d1ecf1; color: #0c5460; }
-        .status-maintenance { background: #fff3cd; color: #856404; }
-        .status-missing { background: #f8d7da; color: #721c24; }
-        .status-retired { background: #e2e3e5; color: #383d41; }
-        
+
+        .status-in-use {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-available {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-maintenance {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-missing {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-retired {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
                 transition: transform 0.3s;
             }
-            
+
             .sidebar.show {
                 transform: translateX(0);
             }
-            
+
             .main-content {
                 margin-left: 0;
             }
         }
     </style>
-    
+
     {% block extra_css %}{% endblock %}
 </head>
+
 <body>
     {% if user.is_authenticated %}
     <!-- Sidebar -->
@@ -172,18 +193,27 @@
         </div>
         <ul class="sidebar-menu">
             <li>
-                <a href="{% url 'dashboard:home' %}" class="{% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+                <a href="{% url 'dashboard:home' %}"
+                    class="{% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
             <li>
-                <a href="{% url 'assets:list' %}" class="{% if request.resolver_match.app_name == 'assets' %}active{% endif %}">
+                <a href="{% url 'assets:list' %}"
+                    class="{% if request.resolver_match.app_name == 'assets' %}active{% endif %}">
                     <i class="bi bi-box"></i> Assets
                 </a>
             </li>
             <li>
-                <a href="{% url 'maintenance:list' %}" class="{% if request.resolver_match.app_name == 'maintenance' %}active{% endif %}">
+                <a href="{% url 'maintenance:list' %}"
+                    class="{% if request.resolver_match.app_name == 'maintenance' %}active{% endif %}">
                     <i class="bi bi-tools"></i> Maintenance
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'users:directory' %}"
+                    class="{% if request.resolver_match.url_name == 'directory' or request.resolver_match.url_name == 'user_assets' or request.resolver_match.url_name == 'department_assets' %}active{% endif %}">
+                    <i class="bi bi-people-fill"></i> People &amp; Depts
                 </a>
             </li>
             <li>
@@ -205,7 +235,7 @@
             </li>
         </ul>
     </div>
-    
+
     <!-- Main Content -->
     <div class="main-content">
         <div class="top-header">
@@ -219,8 +249,8 @@
                 <span class="text-muted">Welcome, <strong>{{ user.username }}</strong></span>
             </div>
         </div>
-    {% endif %}
-    
+        {% endif %}
+
         {% if messages %}
         <div class="messages">
             {% for message in messages %}
@@ -231,22 +261,23 @@
             {% endfor %}
         </div>
         {% endif %}
-        
+
         {% block content %}{% endblock %}
-    
-    {% if user.is_authenticated %}
+
+        {% if user.is_authenticated %}
     </div>
     {% endif %}
-    
+
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('show');
         }
     </script>
-    
+
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

@@ -1,0 +1,6 @@
+{
+  "htmlWhitespaceSensitivity": "ignore",
+  "printWidth": 99999,
+  "proseWrap": "never",
+  "embeddedLanguageFormatting": "off"
+}

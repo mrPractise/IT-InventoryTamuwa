@@ -34,20 +34,16 @@
 
         <div class="row mb-3">
             <div class="col-md-6">
-                <strong>Assigned User:</strong><br>
+                <strong>Assigned To:</strong><br>
                 {% if log.asset.assigned_to %}
-                {{ log.asset.assigned_to.get_full_name|default:log.asset.assigned_to.username }}
+                {{ log.asset.assigned_to.full_name }}
                 {% else %}
                 <span class="text-muted">Unassigned</span>
                 {% endif %}
             </div>
             <div class="col-md-6">
-                <strong>Previous User (if auto-created):</strong><br>
-                {% if log.previous_assigned_user %}
-                {{ log.previous_assigned_user.get_full_name|default:log.previous_assigned_user.username }}
-                {% else %}
-                <span class="text-muted">N/A</span>
-                {% endif %}
+                <strong>Department:</strong><br>
+                {{ log.asset.department.name|default:"N/A" }}
             </div>
         </div>
 

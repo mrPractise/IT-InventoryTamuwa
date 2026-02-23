@@ -23,8 +23,8 @@
                 <div class="col-md-2">
                     <select name="status" class="form-select">
                         <option value="">All Status</option>
-                        <option value="Open" {% if status_filter=='Open' %}selected{% endif %}>Open</option>
-                        <option value="Closed" {% if status_filter=='Closed' %}selected{% endif %}>Closed</option>
+                        <option value="Open" {% if status_filter == 'Open' %}selected{% endif %}>Open</option>
+                        <option value="Closed" {% if status_filter == 'Closed' %}selected{% endif %}>Closed</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -63,7 +63,7 @@
                         <td>{{ log.asset.category.name|default:"N/A" }}</td>
                         <td>
                             {% if log.asset.assigned_to %}
-                            {{ log.asset.assigned_to.get_full_name|default:log.asset.assigned_to.username }}
+                            {{ log.asset.assigned_to.full_name }}
                             {% else %}
                             <span class="text-muted">Unassigned</span>
                             {% endif %}

@@ -14,21 +14,21 @@ def auto_update_status_on_assignment(sender, instance, **kwargs):
             old_assigned_to = old_instance.assigned_to
             old_status = old_instance.status
             
-            # If assigned_to is being set and status is not "In Use"
-            if instance.assigned_to and instance.status.name != 'In Use':
+            # If assigned_to OR department is being set and status is not "In Use"
+            if (instance.assigned_to or instance.department) and instance.status.name != 'In Use':
                 in_use_status = StatusOption.objects.filter(name='In Use').first()
                 if in_use_status:
                     instance.status = in_use_status
             
-            # If assigned_to is being cleared and status is "In Use"
-            if not instance.assigned_to and old_assigned_to and instance.status.name == 'In Use':
+            # If both are being cleared and status is "In Use"
+            if not instance.assigned_to and not instance.department and (old_instance.assigned_to or old_instance.department) and instance.status.name == 'In Use':
                 available_status = StatusOption.objects.filter(name='Available').first()
                 if available_status:
                     instance.status = available_status
             
-            # Update last_known_user when assignment changes
-            if instance.assigned_to != old_assigned_to and old_assigned_to:
-                instance.last_known_user = old_assigned_to
+            # Update last_known_person when assignment changes
+            if instance.assigned_to != old_instance.assigned_to and old_instance.assigned_to:
+                instance.last_known_person = old_instance.assigned_to
                 
             # Attach old instance for post_save signals
             instance._old_instance = old_instance
@@ -37,8 +37,8 @@ def auto_update_status_on_assignment(sender, instance, **kwargs):
             instance._old_instance = None
     else:  # New asset
         instance._old_instance = None
-        # If assigned_to is set on creation, set status to "In Use"
-        if instance.assigned_to:
+        # If assigned_to or department is set on creation, set status to "In Use"
+        if instance.assigned_to or instance.department:
             in_use_status = StatusOption.objects.filter(name='In Use').first()
             if in_use_status:
                 instance.status = in_use_status
@@ -48,11 +48,12 @@ def auto_update_status_on_assignment(sender, instance, **kwargs):
 def handle_assignment_history(sender, instance, created, **kwargs):
     """Create assignment history when assigned_to changes"""
     if created:
-        # New asset - create initial assignment if assigned_to is set
-        if instance.assigned_to:
+        # New asset - create initial assignment if assigned_to or department is set
+        if instance.assigned_to or instance.department:
             AssignmentHistory.objects.create(
                 asset=instance,
-                user=instance.assigned_to,
+                person=instance.assigned_to,
+                department=instance.department,
                 start_date=timezone.now()
             )
     else:
@@ -61,30 +62,21 @@ def handle_assignment_history(sender, instance, created, **kwargs):
         if old_instance:
             old_assigned_to = old_instance.assigned_to
             
-            if instance.assigned_to != old_assigned_to:
+            if instance.assigned_to != old_instance.assigned_to or instance.department != old_instance.department:
                 # Close previous assignment
-                if old_assigned_to:
-                    AssignmentHistory.objects.filter(
-                        asset=instance,
-                        user=old_assigned_to,
-                        end_date__isnull=True
-                    ).update(end_date=timezone.now())
+                AssignmentHistory.objects.filter(
+                    asset=instance,
+                    end_date__isnull=True
+                ).update(end_date=timezone.now())
                 
                 # Create new assignment
-                if instance.assigned_to:
-                    # Check if there's already an open assignment for this user
-                    existing = AssignmentHistory.objects.filter(
+                if instance.assigned_to or instance.department:
+                    AssignmentHistory.objects.create(
                         asset=instance,
-                        user=instance.assigned_to,
-                        end_date__isnull=True
-                    ).first()
-                    
-                    if not existing:
-                        AssignmentHistory.objects.create(
-                            asset=instance,
-                            user=instance.assigned_to,
-                            start_date=timezone.now()
-                        )
+                        person=instance.assigned_to,
+                        department=instance.department,
+                        start_date=timezone.now()
+                    )
         # Removed broken try/except that fetched new instance
 
 
@@ -103,8 +95,8 @@ def create_maintenance_log_on_status_change(sender, instance, created, **kwargs)
                     asset=instance,
                     date_reported=timezone.now().date(),
                     maintenance_status='Open',
-                    description=f"Asset automatically moved to maintenance. Previous status: {old_status.name}",
-                    previous_assigned_user=instance.last_known_user
+                    description=f"Asset status changed to Under Maintenance. Previous status: {old_status.name}",
+                    previous_assigned_person=instance.last_known_person,
                 )
         # Removed broken try/except that fetched new instance
 
@@ -123,6 +115,11 @@ def log_activity(sender, instance, created, **kwargs):
             if old_instance.assigned_to != instance.assigned_to:
                 changes.append(f"Assigned To: {old_instance.assigned_to} -> {instance.assigned_to}")
                 action = 'ASSIGN' if instance.assigned_to else 'UNASSIGN'
+            
+            if old_instance.department != instance.department:
+                changes.append(f"Department: {old_instance.department} -> {instance.department}")
+                if not action in ['ASSIGN', 'UNASSIGN']:
+                    action = 'ASSIGN' if instance.department else 'UNASSIGN'
             
             if old_instance.status != instance.status:
                 changes.append(f"Status: {old_instance.status} -> {instance.status}")
