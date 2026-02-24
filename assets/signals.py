@@ -11,28 +11,35 @@ def auto_update_status_on_assignment(sender, instance, **kwargs):
     if instance.pk:  # Existing asset
         try:
             old_instance = Asset.objects.get(pk=instance.pk)
-            old_assigned_to = old_instance.assigned_to
-            old_status = old_instance.status
-            
-            # If assigned_to OR department is being set and status is not "In Use"
-            if (instance.assigned_to or instance.department) and instance.status.name != 'In Use':
+
+            # Only auto-set to "In Use" if assignment is being NEWLY added
+            # (was None/empty before, now has a value). Do NOT override if
+            # the user explicitly chose a different status (e.g. Under Maintenance).
+            assignment_newly_added = (
+                (instance.assigned_to and not old_instance.assigned_to) or
+                (instance.department and not old_instance.department)
+            )
+
+            if assignment_newly_added and instance.status.name != 'In Use':
                 in_use_status = StatusOption.objects.filter(name='In Use').first()
                 if in_use_status:
                     instance.status = in_use_status
-            
-            # If both are being cleared and status is "In Use"
-            if not instance.assigned_to and not instance.department and (old_instance.assigned_to or old_instance.department) and instance.status.name == 'In Use':
+
+            # If both assignment and department are being cleared and status is still "In Use"
+            if (not instance.assigned_to and not instance.department and
+                    (old_instance.assigned_to or old_instance.department) and
+                    instance.status.name == 'In Use'):
                 available_status = StatusOption.objects.filter(name='Available').first()
                 if available_status:
                     instance.status = available_status
-            
+
             # Update last_known_person when assignment changes
             if instance.assigned_to != old_instance.assigned_to and old_instance.assigned_to:
                 instance.last_known_person = old_instance.assigned_to
-                
+
             # Attach old instance for post_save signals
             instance._old_instance = old_instance
-            
+
         except Asset.DoesNotExist:
             instance._old_instance = None
     else:  # New asset
@@ -42,6 +49,7 @@ def auto_update_status_on_assignment(sender, instance, **kwargs):
             in_use_status = StatusOption.objects.filter(name='In Use').first()
             if in_use_status:
                 instance.status = in_use_status
+
 
 
 @receiver(post_save, sender=Asset)
@@ -81,24 +89,27 @@ def handle_assignment_history(sender, instance, created, **kwargs):
 
 
 @receiver(post_save, sender=Asset)
-def create_maintenance_log_on_status_change(sender, instance, created, **kwargs):
-    """Auto-create maintenance log when status changes to 'Under Maintenance'"""
+def auto_close_maintenance_logs_on_status_change(sender, instance, created, **kwargs):
+    """When asset status moves AWAY from 'Under Maintenance', auto-close any open logs.
+    We do NOT auto-create logs here — maintenance logs must be created explicitly."""
+    from maintenance.models import MaintenanceLog
+
     if not created:
         old_instance = getattr(instance, '_old_instance', None)
         if old_instance:
             old_status = old_instance.status
-            
-            if instance.status and old_status and instance.status.name == 'Under Maintenance' and old_status.name != 'Under Maintenance':
-                from maintenance.models import MaintenanceLog
-                
-                MaintenanceLog.objects.create(
+
+            # Status changed AWAY FROM Under Maintenance → auto-close open logs
+            if (instance.status and old_status and
+                    old_status.name == 'Under Maintenance' and
+                    instance.status.name != 'Under Maintenance'):
+                MaintenanceLog.objects.filter(
                     asset=instance,
-                    date_reported=timezone.now().date(),
-                    maintenance_status='Open',
-                    description=f"Asset status changed to Under Maintenance. Previous status: {old_status.name}",
-                    previous_assigned_person=instance.last_known_person,
+                    maintenance_status='Open'
+                ).update(
+                    maintenance_status='Closed',
+                    date_completed=timezone.now().date(),
                 )
-        # Removed broken try/except that fetched new instance
 
 
 @receiver(post_save, sender=Asset)
@@ -106,35 +117,41 @@ def log_activity(sender, instance, created, **kwargs):
     """Create activity log entry for asset changes"""
     action = 'CREATE' if created else 'UPDATE'
     description = f"Asset {instance.asset_id} was {'created' if created else 'updated'}"
-    
+    old_value = ''
+    new_value = ''
+
     if not created:
         old_instance = getattr(instance, '_old_instance', None)
         if old_instance:
             changes = []
-            
+
             if old_instance.assigned_to != instance.assigned_to:
                 changes.append(f"Assigned To: {old_instance.assigned_to} -> {instance.assigned_to}")
                 action = 'ASSIGN' if instance.assigned_to else 'UNASSIGN'
-            
+
             if old_instance.department != instance.department:
                 changes.append(f"Department: {old_instance.department} -> {instance.department}")
-                if not action in ['ASSIGN', 'UNASSIGN']:
+                if action not in ['ASSIGN', 'UNASSIGN']:
                     action = 'ASSIGN' if instance.department else 'UNASSIGN'
-            
+
             if old_instance.status != instance.status:
                 changes.append(f"Status: {old_instance.status} -> {instance.status}")
                 action = 'STATUS_CHANGE'
-            
+                old_value = old_instance.status.name if old_instance.status else ''
+                new_value = instance.status.name if instance.status else ''
+
             if changes:
                 description = f"Asset {instance.asset_id}: " + ", ".join(changes)
-    
+
     # Note: In a real implementation, you'd get the current user from request
     # For now, we'll use the created_by/updated_by fields
     user = instance.created_by if created else instance.updated_by
-    
+
     ActivityLog.objects.create(
         asset=instance,
         user=user,
         action=action,
-        description=description
+        description=description,
+        old_value=old_value,
+        new_value=new_value,
     )

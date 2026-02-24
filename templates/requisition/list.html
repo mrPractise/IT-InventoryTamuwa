@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}Requisitions{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-receipt me-2"></i>Requisitions</span>
+        {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
+        <a href="{% url 'requisition:create' %}" class="btn btn-sm btn-light">
+            <i class="bi bi-plus-circle me-1"></i>New Requisition
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+
+        <!-- Filters -->
+        <form method="get" class="row g-2 mb-4">
+            <div class="col-md-4">
+                <select name="status" class="form-control" onchange="this.form.submit()">
+                    <option value="">All Statuses</option>
+                    {% for val, label in status_choices %}
+                    <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'requisition:list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Req No.</th>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                        <th>Created By</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requisitions %}
+                    <tr>
+                        <td><a href="{% url 'requisition:detail' req.pk %}"><strong>{{ req.req_no }}</strong></a></td>
+                        <td>{{ req.title }}</td>
+                        <td>
+                            {% if req.status == 'Approved' %}
+                                <span class="badge bg-success">{{ req.status }}</span>
+                            {% elif req.status == 'Rejected' %}
+                                <span class="badge bg-danger">{{ req.status }}</span>
+                            {% elif req.status == 'On Hold' %}
+                                <span class="badge bg-warning text-dark">{{ req.status }}</span>
+                            {% elif req.status == 'Bought' %}
+                                <span class="badge" style="background:#6f42c1;">{{ req.status }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ req.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ req.total_amount|intcomma }}</td>
+                        <td>{{ req.created_by.get_full_name|default:req.created_by.username|default:"—" }}</td>
+                        <td>{{ req.created_at|date:"d/m/Y" }}</td>
+                        <td>
+                            <a href="{% url 'requisition:detail' req.pk %}" class="btn btn-sm btn-info">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if req.status != 'Bought' and user.is_superuser or user.profile.role in 'super_admin,admin' and req.status != 'Bought' %}
+                            <a href="{% url 'requisition:update' req.pk %}" class="btn btn-sm btn-warning">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-receipt display-5 d-block mb-2"></i>
+                            No requisitions found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if requisitions.has_other_pages %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% if requisitions.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ requisitions.previous_page_number }}&status={{ status_filter }}">«</a>
+                </li>
+                {% endif %}
+                <li class="page-item disabled">
+                    <span class="page-link">Page {{ requisitions.number }} of {{ requisitions.paginator.num_pages }}</span>
+                </li>
+                {% if requisitions.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ requisitions.next_page_number }}&status={{ status_filter }}">»</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

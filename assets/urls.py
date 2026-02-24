@@ -10,6 +10,5 @@ urlpatterns = [
     path('<int:pk>/edit/', views.asset_update, name='update'),
     path('<int:pk>/delete/', views.asset_delete, name='delete'),
     path('export/excel/', views.asset_export_excel, name='export_excel'),
-    path('export/pdf/', views.asset_export_pdf, name='export_pdf'),
     path('api/get-next-asset-id/', views.get_next_asset_id, name='get_next_asset_id'),
 ]

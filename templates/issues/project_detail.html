@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}Project: {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+
+        <!-- Main Card -->
+        <div class="card mb-3 border-{% if project.status == 'Done' %}success{% elif project.status == 'Rejected' %}danger{% else %}warning{% endif %}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-kanban me-2"></i>{{ project.title }}</span>
+                <div class="d-flex gap-2">
+                    {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
+                    {% if project.status != 'Done' %}
+                    <a href="{% url 'issues:project_update' project.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil me-1"></i>Edit</a>
+                    {% endif %}
+                    {% endif %}
+                    <a href="{% url 'issues:home' %}?tab=projects" class="btn btn-sm btn-light"><i class="bi bi-arrow-left me-1"></i>Back</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Row 1: Priority / Status / Date -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Priority</small>
+                        <span class="badge bg-{% if project.priority == 'High' %}danger{% elif project.priority == 'Medium' %}warning text-dark{% else %}light text-dark border{% endif %}">{{ project.priority }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Status</small>
+                        <span class="badge bg-{% if project.status == 'Done' %}success{% elif project.status == 'Rejected' %}danger{% else %}secondary{% endif %}">{{ project.status }}</span>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Date</small>
+                        {{ project.date|date:"d/m/Y"|default:"—" }}
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Reported By</small>
+                        {{ project.reported_by.get_full_name|default:project.reported_by.username|default:"—" }}
+                    </div>
+                </div>
+
+                <!-- Pending / Rejected reasons -->
+                {% if project.status == 'Pending' and project.pending_reason %}
+                <div class="alert alert-warning py-2 mb-3"><strong>Pending reason:</strong> {{ project.pending_reason }}</div>
+                {% endif %}
+                {% if project.status == 'Rejected' and project.rejected_reason %}
+                <div class="alert alert-danger py-2 mb-3"><strong>Rejected reason:</strong> {{ project.rejected_reason }}</div>
+                {% endif %}
+
+                {% if project.description %}
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">Description</small>
+                    <div class="border rounded p-3 bg-light">{{ project.description|linebreaks }}</div>
+                </div>
+                {% endif %}
+
+                {% if project.problem_statement %}
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">Problem Statement</small>
+                    <div class="border rounded p-3 bg-light">{{ project.problem_statement|linebreaks }}</div>
+                </div>
+                {% endif %}
+
+                {% if project.cost_breakdown %}
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">Cost Breakdown</small>
+                    <div class="border rounded p-3 bg-light" style="white-space: pre-line;">{{ project.cost_breakdown }}</div>
+                </div>
+                {% endif %}
+
+                {% if project.conclusion %}
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">Conclusion</small>
+                    <div class="border rounded p-3 bg-light">{{ project.conclusion|linebreaks }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Asset Availability Card -->
+        {% if category_counts %}
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-box me-2"></i>Asset Availability by Category</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Category</th><th>Available Assets</th></tr></thead>
+                    <tbody>
+                        {% for cat, count in category_counts %}
+                        <tr>
+                            <td>{{ cat.name }}</td>
+                            <td>
+                                <span class="badge bg-{% if count > 0 %}success{% else %}danger{% endif %}">
+                                    {{ count }} available
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Linked Requisitions -->
+        {% with reqs=project.requisitions.all %}
+        {% if reqs %}
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-receipt me-2"></i>Linked Requisitions</div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                {% for req in reqs %}
+                <a href="{% url 'requisition:detail' req.pk %}" class="badge bg-info text-dark text-decoration-none fs-6 py-2 px-3">
+                    {{ req.req_no }} — {{ req.title }}
+                    <span class="badge bg-{% if req.status == 'Approved' %}success{% elif req.status == 'Rejected' %}danger{% elif req.status == 'Bought' %}dark{% else %}secondary{% endif %} ms-1">{{ req.status }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Activity Log -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-chat-left-text me-2"></i>Activity Log
+                <span class="badge bg-secondary ms-1">{{ comments|length }}</span>
+            </div>
+            <div class="card-body">
+                {% for comment in comments %}
+                <div class="d-flex mb-3">
+                    <div class="me-3 text-center" style="min-width:40px">
+                        <i class="bi bi-person-circle fs-4 text-muted"></i>
+                        <div class="text-muted" style="font-size:0.7rem">{{ comment.created_at|date:"d/m" }}</div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="border rounded p-2 bg-light">
+                            <strong class="small">{{ comment.author.get_full_name|default:comment.author.username }}</strong>
+                            <span class="text-muted small ms-2">{{ comment.created_at|date:"d/m/Y H:i" }}</span>
+                            <div class="mt-1">{{ comment.body|linebreaks }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center py-3 mb-0">No comments yet.</p>
+                {% endfor %}
+
+                {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
+                <hr class="my-3">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ comment_form.body }}
+                    <button type="submit" class="btn btn-sm btn-primary mt-2">
+                        <i class="bi bi-send me-1"></i>Post Comment
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>Summary</div>
+            <div class="card-body small">
+                <div class="mb-2"><span class="text-muted">Status:</span>
+                    <span class="badge ms-1 bg-{% if project.status == 'Done' %}success{% elif project.status == 'Rejected' %}danger{% else %}secondary{% endif %}">{{ project.status }}</span>
+                </div>
+                <div class="mb-2"><span class="text-muted">Priority:</span> <strong>{{ project.priority }}</strong></div>
+                <div class="mb-2"><span class="text-muted">Categories:</span> {{ project.categories.count }}</div>
+                <div class="mb-2"><span class="text-muted">Requisitions:</span> {{ project.requisitions.count }}</div>
+                <div class="mb-2"><span class="text-muted">Comments:</span> {{ comments|length }}</div>
+                <div class="mb-2"><span class="text-muted">Created:</span> {{ project.created_at|date:"d/m/Y" }}</div>
+                <div><span class="text-muted">Last updated:</span> {{ project.updated_at|date:"d/m/Y H:i" }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

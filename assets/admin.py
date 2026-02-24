@@ -9,6 +9,14 @@ class CategoryAdmin(admin.ModelAdmin):
     list_filter = ['created_at']
     list_editable = ['short_code']
 
+    def save_model(self, request, obj, form, change):
+        if not obj.short_code:
+            from django.core.exceptions import ValidationError
+            from django.contrib import messages as adm_messages
+            adm_messages.error(request, 'Short code is required for a category.')
+            return  # Don't save
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(StatusOption)
 class StatusOptionAdmin(admin.ModelAdmin):

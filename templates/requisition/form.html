@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .item-row td { vertical-align: middle; }
+    .delete-row-btn { cursor: pointer; }
+    #item-total-row td { font-weight: 700; background: #f8f9fa; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-{% if req %}pencil{% else %}plus-circle{% endif %} me-2"></i>{{ title }}</span>
+        <a href="{% if req %}{% url 'requisition:detail' req.pk %}{% else %}{% url 'requisition:list' %}{% endif %}" class="btn btn-sm btn-light">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+    <div class="card-body">
+        <form method="post" id="req-form">
+            {% csrf_token %}
+
+            <!-- Main form fields -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Requisition No. <span class="text-danger">*</span></label>
+                    {{ form.req_no }}
+                    <div class="form-text text-muted">Copy from your physical book (must be unique).</div>
+                    {% if form.req_no.errors %}<div class="text-danger small">{{ form.req_no.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                    {{ form.title }}
+                    {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+                    {{ form.status }}
+                    {% if form.status.errors %}<div class="text-danger small">{{ form.status.errors }}</div>{% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Description / Summary</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+        <!-- Items Table -->
+        <h6 class="fw-bold mb-3"><i class="bi bi-list-ul me-2"></i>Items / Services</h6>
+
+        <!-- Formset management form -->
+        {{ formset.management_form }}
+
+        <div class="table-responsive">
+            <table class="table align-middle" id="items-table">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:38%">Item / Service</th>
+                        <th style="width:15%">Unit Price</th>
+                        <th style="width:10%">Qty</th>
+                        <th style="width:12%">Total</th>
+                        <th style="width:8%" class="text-center" title="Approved">✓</th>
+                        <th style="width:12%">Reason (if rejected)</th>
+                        <th style="width:5%"></th>
+                    </tr>
+                </thead>
+                <tbody id="formset-body">
+                    {% for item_form in formset %}
+                    <tr class="item-row{% if item_form.instance.pk and not item_form.instance.is_approved %} table-danger{% endif %}">
+                        <td>
+                            {{ item_form.id }}
+                            {{ item_form.item_name }}
+                            {% if item_form.item_name.errors %}<div class="text-danger small">{{ item_form.item_name.errors }}</div>{% endif %}
+                        </td>
+                        <td>{{ item_form.unit_price }}</td>
+                        <td>{{ item_form.quantity }}</td>
+                        <td class="row-total text-end fw-semibold">0</td>
+                        <td class="text-center">
+                            {{ item_form.is_approved }}
+                        </td>
+                        <td>{{ item_form.rejection_reason }}</td>
+                        <td class="text-center">
+                            {% if item_form.DELETE %}
+                            <div style="display:none;">{{ item_form.DELETE }}</div>
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-row-btn" title="Remove">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr id="item-total-row">
+                        <td colspan="3" class="text-end">Approved Total:</td>
+                        <td class="text-end" id="grand-total">0</td>
+                        <td colspan="3"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="add-item-btn">
+            <i class="bi bi-plus-circle me-1"></i>Add Item
+        </button>
+
+        <!-- EMPTY form template for JS cloning -->
+        <div id="empty-form-template" style="display:none;">
+            <table><tbody>
+                <tr class="item-row">
+                    <td>
+                        <input type="hidden" name="items-__prefix__-id">
+                        <input type="text" name="items-__prefix__-item_name" class="form-control" placeholder="Item or service description">
+                    </td>
+                    <td><input type="number" name="items-__prefix__-unit_price" class="form-control item-unit-price" step="0.01" min="0" value="0"></td>
+                    <td><input type="number" name="items-__prefix__-quantity" class="form-control item-quantity" min="1" value="1"></td>
+                    <td class="row-total text-end fw-semibold">0</td>
+                    <td class="text-center">
+                        <input type="checkbox" name="items-__prefix__-is_approved" class="form-check-input item-approved" checked>
+                    </td>
+                    <td><input type="text" name="items-__prefix__-rejection_reason" class="form-control item-reason" placeholder="Reason..."></td>
+                    <td class="text-center">
+                        <input type="checkbox" name="items-__prefix__-DELETE" style="display:none;">
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-row-btn"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save me-1"></i>Save Requisition
+                </button>
+                <a href="{% if req %}{% url 'requisition:detail' req.pk %}{% else %}{% url 'requisition:list' %}{% endif %}"
+                    class="btn btn-secondary ms-2">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function formatNumber(n) {
+        return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function applyRowStyle(row) {
+        const cb = row.querySelector('.item-approved');
+        if (!cb) return;
+        if (cb.checked) {
+            row.classList.remove('table-danger');
+            row.querySelectorAll('td').forEach(td => td.style.textDecoration = '');
+        } else {
+            row.classList.add('table-danger');
+            row.querySelectorAll('td').forEach(td => td.style.textDecoration = 'line-through');
+        }
+    }
+
+    function updateTotals() {
+        let approvedTotal = 0;
+        document.querySelectorAll('#items-table tbody tr.item-row:not([style*="none"])').forEach(row => {
+            const price = parseFloat(row.querySelector('.item-unit-price')?.value) || 0;
+            const qty = parseInt(row.querySelector('.item-quantity')?.value) || 0;
+            const total = price * qty;
+            const cb = row.querySelector('.item-approved');
+            const isApproved = cb ? cb.checked : true;
+            const cell = row.querySelector('.row-total');
+            if (cell) cell.textContent = formatNumber(total);
+            if (isApproved) approvedTotal += total;
+        });
+        document.getElementById('grand-total').textContent = formatNumber(approvedTotal);
+    }
+
+    // Apply styles for existing rows on load
+    document.querySelectorAll('#items-table tbody tr.item-row').forEach(applyRowStyle);
+
+    document.getElementById('items-table').addEventListener('input', updateTotals);
+
+    document.getElementById('items-table').addEventListener('change', function(e) {
+        if (e.target.classList.contains('item-approved')) {
+            applyRowStyle(e.target.closest('.item-row'));
+            updateTotals();
+        }
+    });
+
+    // Delete row
+    document.getElementById('items-table').addEventListener('click', function(e) {
+        const btn = e.target.closest('.delete-row-btn');
+        if (!btn) return;
+        const row = btn.closest('.item-row');
+        const checkbox = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (checkbox) {
+            checkbox.checked = true;
+            row.style.display = 'none';
+        } else {
+            row.remove();
+        }
+        updateTotals();
+    });
+
+    // Add new item row
+    let formCount = {{ formset.total_form_count }};
+    document.getElementById('add-item-btn').addEventListener('click', function() {
+        const template = document.getElementById('empty-form-template');
+        const newRow = template.querySelector('tr').cloneNode(true);
+        newRow.innerHTML = newRow.innerHTML.replace(/__prefix__/g, formCount);
+        document.getElementById('formset-body').appendChild(newRow);
+        document.querySelector('[name="items-TOTAL_FORMS"]').value = ++formCount;
+        updateTotals();
+    });
+
+    // Init totals on page load
+    updateTotals();
+</script>
+{% endblock %}

@@ -5,7 +5,8 @@
 {% block extra_css %}
 <style>
     .dept-hero {
-        background: linear-gradient(135deg, #166534 0%, #3498db 100%);
+        background: #2e7d32;
+
         border-radius: 16px;
         padding: 28px 30px;
         color: #fff;
@@ -160,7 +161,7 @@
                         </span>
                     </td>
                     <td class="text-end pe-4">
-                        <a href="{% url 'assets:edit' asset.id %}" class="btn btn-sm btn-outline-primary">
+                        <a href="{% url 'assets:update' asset.id %}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-pencil"></i>
                         </a>
                     </td>

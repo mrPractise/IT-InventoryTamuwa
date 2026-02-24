@@ -52,6 +52,8 @@ urlpatterns = [
     path("", include("dashboard.urls")),
     path("assets/", include("assets.urls")),
     path("maintenance/", include("maintenance.urls")),
+    path("requisition/", include("requisition.urls")),
+    path("issues/", include("issues.urls")),
     path("users/", include("users.urls")),
     path("accounts/login/", user_views.login_view, name="login"),  # For admin login
     path("api/", include(router.urls)),

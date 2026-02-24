@@ -5,8 +5,11 @@
 
 {% block content %}
 <div class="card">
-    <div class="card-header">
-        <i class="bi bi-{% if asset %}pencil{% else %}plus-circle{% endif %}"></i> {{ title }}
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-{% if asset %}pencil{% else %}plus-circle{% endif %}"></i> {{ title }}</span>
+        <a href="{% if asset %}{% url 'assets:detail' asset.pk %}{% else %}{% url 'assets:list' %}{% endif %}" class="btn btn-sm btn-light">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
     </div>
     <div class="card-body">
         <form method="post">

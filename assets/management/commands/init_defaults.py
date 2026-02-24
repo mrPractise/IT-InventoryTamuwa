@@ -10,9 +10,9 @@ class Command(BaseCommand):
         statuses = [
             {'name': 'In Use', 'color': '#28a745'},
             {'name': 'Available', 'color': '#17a2b8'},
-            {'name': 'Under Maintenance', 'color': '#ffc107'},
             {'name': 'Missing', 'color': '#dc3545'},
             {'name': 'Retired', 'color': '#6c757d'},
+            {'name': 'Under Maintenance', 'color': '#ffc107'},
         ]
         
         for status_data in statuses:

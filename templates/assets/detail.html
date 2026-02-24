@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block page_title %}Asset Details - {{ asset.asset_id }}{% endblock %}
 
@@ -6,8 +7,11 @@
 <div class="row">
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header">
-                <i class="bi bi-info-circle"></i> Asset Information
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-info-circle"></i> Asset Information</span>
+                <a href="{% url 'assets:list' %}" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Assets
+                </a>
             </div>
             <div class="card-body">
                 <div class="row mb-3">
@@ -41,7 +45,7 @@
                     </div>
                     <div class="col-md-6">
                         <strong>Purchase Date:</strong><br>
-                        {{ asset.purchase_date|date:"M d, Y"|default:"Not set" }}
+                        {{ asset.purchase_date|date:"d/m/Y"|default:"Not set" }}
                     </div>
                 </div>
 
@@ -106,8 +110,8 @@
                                     Unassigned
                                     {% endif %}
                                 </td>
-                                <td>{{ assignment.start_date|date:"M d, Y H:i" }}</td>
-                                <td>{{ assignment.end_date|date:"M d, Y H:i"|default:"Current" }}</td>
+                                <td>{{ assignment.start_date|date:"d/m/Y H:i" }}</td>
+                                <td>{{ assignment.end_date|date:"d/m/Y H:i"|default:"Current" }}</td>
                             </tr>
                             {% empty %}
                             <tr>
@@ -139,7 +143,7 @@
                         <tbody>
                             {% for log in maintenance_logs %}
                             <tr>
-                                <td>{{ log.date_reported|date:"M d, Y" }}</td>
+                                <td>{{ log.date_reported|date:"d/m/Y" }}</td>
                                 <td>
                                     <span
                                         class="badge bg-{% if log.maintenance_status == 'Open' %}warning{% else %}success{% endif %}">
@@ -162,17 +166,28 @@
     </div>
 
     <div class="col-md-4">
-        <!-- QR Code -->
-        {% if asset.qr_code %}
+        <!-- Status History -->
         <div class="card">
             <div class="card-header">
-                <i class="bi bi-qr-code"></i> QR Code
+                <i class="bi bi-arrow-left-right"></i> Status History
             </div>
-            <div class="card-body text-center">
-                <img src="{{ asset.qr_code.url }}" alt="QR Code" class="img-fluid">
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for activity in activity_logs %}
+                    {% if activity.action == 'STATUS_CHANGE' %}
+                    <div class="list-group-item py-2">
+                        <small class="text-muted d-block">{{ activity.timestamp|date:"d/m/Y H:i" }}</small>
+                        <span class="badge bg-secondary me-1">{{ activity.old_value|default:"—" }}</span>
+                        <i class="bi bi-arrow-right text-muted mx-1" style="font-size:0.75rem;"></i>
+                        <span class="badge bg-primary">{{ activity.new_value|default:"—" }}</span>
+                    </div>
+                    {% endif %}
+                    {% empty %}
+                    <div class="text-center text-muted py-3">No status changes recorded</div>
+                    {% endfor %}
+                </div>
             </div>
         </div>
-        {% endif %}
 
         <!-- Activity Log -->
         <div class="card mt-4">
@@ -182,10 +197,10 @@
             <div class="card-body">
                 <div class="list-group list-group-flush">
                     {% for activity in activity_logs %}
-                    <div class="list-group-item">
-                        <small class="text-muted">{{ activity.timestamp|date:"M d, H:i" }}</small><br>
+                    <div class="list-group-item py-2">
+                        <small class="text-muted d-block">{{ activity.timestamp|date:"d/m/Y H:i" }}</small>
                         <strong>{{ activity.get_action_display }}</strong><br>
-                        <small>{{ activity.description|truncatewords:8 }}</small>
+                        <small class="text-muted">{{ activity.description|truncatewords:12 }}</small>
                     </div>
                     {% empty %}
                     <div class="text-center text-muted">No activity</div>

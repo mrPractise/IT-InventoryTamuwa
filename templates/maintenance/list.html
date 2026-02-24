@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block page_title %}Maintenance{% endblock %}
 
@@ -16,7 +17,7 @@
         <!-- Filters -->
         <form method="get" class="mb-4">
             <div class="row g-3">
-                <div class="col-md-8">
+                <div class="col-md-4">
                     <input type="text" name="search" class="form-control"
                         placeholder="Search by Asset ID or Description..." value="{{ search_query }}">
                 </div>
@@ -27,7 +28,17 @@
                         <option value="Closed" {% if status_filter == 'Closed' %}selected{% endif %}>Closed</option>
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3">
+                    <select name="performed_by" class="form-select">
+                        <option value="">All Technicians</option>
+                        {% for person in all_persons %}
+                        <option value="{{ person.id }}" {% if performed_by_filter == person.id|stringformat:'s' %}selected{% endif %}>
+                            {{ person.full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="bi bi-search"></i> Filter
                     </button>
@@ -38,7 +49,7 @@
         <!-- Maintenance Table -->
         <div class="table-responsive">
             <table class="table table-hover">
-                <thead>
+                <thead class="table-light">
                     <tr>
                         <th>Asset ID</th>
                         <th>Category</th>
@@ -47,6 +58,8 @@
                         <th>Date Reported</th>
                         <th>Description</th>
                         <th>Action Taken</th>
+                        <th>Performed By</th>
+                        <th>Req No.</th>
                         <th>Status</th>
                         <th>Cost</th>
                         <th>Actions</th>
@@ -69,25 +82,52 @@
                             {% endif %}
                         </td>
                         <td>{{ log.asset.department.name|default:"N/A" }}</td>
-                        <td>{{ log.date_reported|date:"M d, Y" }}</td>
+                        <td>{{ log.date_reported|date:"d/m/Y" }}</td>
                         <td>{{ log.description|truncatewords:10 }}</td>
                         <td>{{ log.action_taken.name|default:"N/A" }}</td>
+                        <td class="small">
+                            {% if log.performed_by %}
+                            {{ log.performed_by.full_name }}
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.requisition %}
+                            <a href="{% url 'requisition:detail' log.requisition.pk %}" class="badge bg-info text-dark text-decoration-none">
+                                {{ log.requisition.req_no }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <span
-                                class="badge bg-{% if log.maintenance_status == 'Open' %}warning{% else %}success{% endif %}">
+                                class="badge bg-{% if log.maintenance_status == 'Open' %}warning text-dark{% else %}secondary{% endif %}">
                                 {{ log.maintenance_status }}
                             </span>
                         </td>
-                        <td>${{ log.cost_of_repair|default:"0.00" }}</td>
+                        <td>{{ log.cost_of_repair|default:"0.00"|intcomma }}</td>
                         <td>
-                            <a href="{% url 'maintenance:detail' log.pk %}" class="btn btn-sm btn-info">
+                            <a href="{% url 'maintenance:detail' log.pk %}" class="btn btn-sm btn-info" title="View">
                                 <i class="bi bi-eye"></i>
                             </a>
+                            {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
+                            {% if log.maintenance_status == 'Open' %}
+                            <a href="{% url 'maintenance:update' log.pk %}" class="btn btn-sm btn-warning" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% else %}
+                            <button class="btn btn-sm btn-secondary" disabled title="Closed — cannot edit">
+                                <i class="bi bi-lock"></i>
+                            </button>
+                            {% endif %}
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="10" class="text-center text-muted">No maintenance logs found</td>
+                        <td colspan="12" class="text-center text-muted">No maintenance logs found</td>
                     </tr>
                     {% endfor %}
                 </tbody>

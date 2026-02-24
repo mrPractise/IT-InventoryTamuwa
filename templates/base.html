@@ -30,12 +30,12 @@
             left: 0;
             height: 100vh;
             width: var(--sidebar-width);
-            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
-            color: white;
+            background: #3c3c3c;
+            color: #e0e0e0;
             padding-top: var(--header-height);
             z-index: 1000;
             overflow-y: auto;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
         }
 
         .sidebar-brand {
@@ -44,45 +44,57 @@
             left: 0;
             width: var(--sidebar-width);
             height: var(--header-height);
-            background: #1a252f;
+            background: #2a2a2a;
             display: flex;
             align-items: center;
             padding: 0 20px;
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 0.5px;
             z-index: 1001;
-            border-bottom: 3px solid #3498db;
+            border-bottom: 3px solid #6c757d;
         }
 
         .sidebar-menu {
             list-style: none;
-            padding: 0;
+            padding: 8px 0;
             margin: 0;
         }
 
         .sidebar-menu li {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 2px 8px;
+            border-radius: 6px;
+            overflow: hidden;
         }
 
         .sidebar-menu a {
             display: flex;
             align-items: center;
-            padding: 15px 20px;
-            color: rgba(255, 255, 255, 0.8);
+            padding: 12px 16px;
+            color: #c8c8c8;
             text-decoration: none;
-            transition: all 0.3s;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+            font-size: 0.9rem;
         }
 
-        .sidebar-menu a:hover,
+        .sidebar-menu a:hover {
+            background: #4e4e4e;
+            color: #ffffff;
+        }
+
         .sidebar-menu a.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            padding-left: 25px;
+            background: #555555;
+            color: #ffffff;
+            font-weight: 600;
+            border-left: 3px solid #adb5bd;
         }
 
         .sidebar-menu i {
             margin-right: 10px;
-            width: 20px;
+            width: 18px;
+            font-size: 1rem;
         }
 
         .main-content {
@@ -109,7 +121,7 @@
         }
 
         .card-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #495057;
             color: white;
             border-radius: 10px 10px 0 0 !important;
             padding: 15px 20px;
@@ -211,6 +223,24 @@
                 </a>
             </li>
             <li>
+                <a href="{% url 'issues:home' %}"
+                    class="{% if request.resolver_match.app_name == 'issues' %}active{% endif %}">
+                    <i class="bi bi-bug"></i> Issues &amp; Projects
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'requisition:list' %}"
+                    class="{% if request.resolver_match.app_name == 'requisition' %}active{% endif %}">
+                    <i class="bi bi-receipt"></i> Requisitions
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'requisition:unapproved_items' %}"
+                    class="{% if request.resolver_match.url_name == 'unapproved_items' %}active{% endif %}">
+                    <i class="bi bi-x-circle"></i> Not Approved Items
+                </a>
+            </li>
+            <li>
                 <a href="{% url 'users:directory' %}"
                     class="{% if request.resolver_match.url_name == 'directory' or request.resolver_match.url_name == 'user_assets' or request.resolver_match.url_name == 'department_assets' %}active{% endif %}">
                     <i class="bi bi-people-fill"></i> People &amp; Depts
@@ -275,6 +305,17 @@
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('show');
         }
+
+        // Auto-dismiss alerts after 4 seconds
+        document.addEventListener('DOMContentLoaded', function () {
+            const alerts = document.querySelectorAll('.messages .alert');
+            alerts.forEach(function (alert) {
+                setTimeout(function () {
+                    const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                    bsAlert.close();
+                }, 4000);
+            });
+        });
     </script>
 
     {% block extra_js %}{% endblock %}

@@ -62,6 +62,22 @@ class MaintenanceLog(models.Model):
         related_name='completed_maintenance'
     )
     notes = models.TextField(blank=True)
+    requisition = models.ForeignKey(
+        'requisition.Requisition',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='maintenance_logs',
+        verbose_name="Requisition No."
+    )
+    performed_by = models.ForeignKey(
+        Person,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='performed_maintenance',
+        verbose_name="Performed By"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -6,17 +6,17 @@ from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from .models import Asset, Category, StatusOption, Department
-from .utils import export_assets_excel, export_assets_pdf
+from .utils import export_assets_excel
 from users.decorators import role_required
 
 
 @login_required
 def asset_list(request):
-    """List all assets with search and filter"""
+    """List all assets with search, filter, and sort"""
     assets = Asset.objects.filter(is_deleted=False).select_related(
-        'category', 'status', 'assigned_to', 'department'
+        'category', 'status', 'assigned_to', 'department', 'requisition'
     )
-    
+
     # Search
     search_query = request.GET.get('search', '')
     if search_query:
@@ -25,32 +25,50 @@ def asset_list(request):
             Q(serial_number__icontains=search_query) |
             Q(model_description__icontains=search_query) |
             Q(assigned_to__first_name__icontains=search_query) |
-            Q(assigned_to__last_name__icontains=search_query)
+            Q(assigned_to__last_name__icontains=search_query) |
+            Q(purchased_from__icontains=search_query)
         )
-    
+
     # Filters
     category_filter = request.GET.get('category')
-    if category_filter:
+    if category_filter and category_filter.isdigit():
         assets = assets.filter(category_id=category_filter)
-    
+
     status_filter = request.GET.get('status')
-    if status_filter:
+    if status_filter and status_filter.isdigit():
         assets = assets.filter(status_id=status_filter)
-    
+
     assigned_filter = request.GET.get('assigned')
     if assigned_filter == 'assigned':
         assets = assets.exclude(assigned_to__isnull=True)
     elif assigned_filter == 'unassigned':
         assets = assets.filter(assigned_to__isnull=True)
-    
+
+    # Sorting
+    SORT_MAP = {
+        'asset_id': 'asset_id',
+        'category': 'category__name',
+        'model': 'model_description',
+        'cost': 'purchase_cost',
+        'date': 'purchase_date',
+        'status': 'status__name',
+        'vendor': 'purchased_from',
+    }
+    sort_by = request.GET.get('sort', '')
+    sort_dir = request.GET.get('dir', 'asc')
+    orm_field = SORT_MAP.get(sort_by, '-created_at')
+    if sort_by and sort_dir == 'desc':
+        orm_field = f'-{orm_field}'
+    assets = assets.order_by(orm_field)
+
     # Pagination
     paginator = Paginator(assets, 25)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
     categories = Category.objects.all()
     statuses = StatusOption.objects.filter(is_active=True)
-    
+
     context = {
         'page_obj': page_obj,
         'categories': categories,
@@ -58,6 +76,8 @@ def asset_list(request):
         'search_query': search_query,
         'category_filter': category_filter,
         'status_filter': status_filter,
+        'sort_by': sort_by,
+        'sort_dir': sort_dir,
         'assigned_filter': assigned_filter,
     }
     
@@ -171,12 +191,6 @@ def asset_export_excel(request):
     assets = Asset.objects.filter(is_deleted=False).select_related('category', 'status', 'assigned_to')
     return export_assets_excel(assets)
 
-
-@login_required
-def asset_export_pdf(request):
-    """Export assets to PDF"""
-    assets = Asset.objects.filter(is_deleted=False).select_related('category', 'status', 'assigned_to')
-    return export_assets_pdf(assets)
 
 @login_required
 def get_next_asset_id(request):

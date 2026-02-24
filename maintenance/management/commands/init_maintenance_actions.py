@@ -7,14 +7,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         actions = [
-            'Repaired',
-            'Replaced',
-            'Cleaned',
-            'Calibrated',
-            'Software Update',
-            'Hardware Upgrade',
-            'Sent to Vendor',
-            'No Action Required',
+            'Awaiting approval for repair',
+            'De-Commissioned',
+            'Investigation',
+            'To Nairobi',
         ]
         
         for action_name in actions:

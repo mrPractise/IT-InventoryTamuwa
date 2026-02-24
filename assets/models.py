@@ -114,6 +114,16 @@ class Asset(models.Model):
     )
     status = models.ForeignKey(StatusOption, on_delete=models.PROTECT, related_name='assets')
     admin_comments = models.TextField(blank=True)
+    purchased_from = models.CharField(max_length=200, blank=True, verbose_name="Purchased From (Vendor)")
+    purchase_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="Purchase Cost")
+    requisition = models.ForeignKey(
+        'requisition.Requisition',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assets',
+        verbose_name="Requisition No."
+    )
     is_deleted = models.BooleanField(default=False, db_index=True)  # Soft delete
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

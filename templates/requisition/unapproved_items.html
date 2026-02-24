@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}Unapproved Items{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-x-circle me-2"></i>Not-Approved Requisition Items</span>
+        <a href="{% url 'requisition:list' %}" class="btn btn-sm btn-light">
+            <i class="bi bi-arrow-left me-1"></i>Back to Requisitions
+        </a>
+    </div>
+    <div class="card-body">
+        {% if items %}
+        <p class="text-muted mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            These items were marked as <strong>not approved</strong> in their respective requisitions.
+            They are kept for record purposes only.
+        </p>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Req No.</th>
+                        <th>Req Title</th>
+                        <th>Item / Service</th>
+                        <th class="text-end">Unit Price</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-end">Value</th>
+                        <th>Reason</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'requisition:detail' item.requisition.pk %}" class="fw-bold text-decoration-none">
+                                {{ item.requisition.req_no }}
+                            </a>
+                        </td>
+                        <td>{{ item.requisition.title }}</td>
+                        <td class="text-decoration-line-through text-muted">{{ item.item_name }}</td>
+                        <td class="text-end text-muted">{{ item.unit_price|intcomma }}</td>
+                        <td class="text-center text-muted">{{ item.quantity }}</td>
+                        <td class="text-end text-muted">{{ item.total_price|intcomma }}</td>
+                        <td>
+                            {% if item.rejection_reason %}
+                                <span class="text-danger fst-italic"><i class="bi bi-chat-left-text me-1"></i>{{ item.rejection_reason }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-nowrap">{{ item.requisition.created_at|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-light">
+                        <td colspan="5" class="text-end fw-bold">Total Value Not Approved:</td>
+                        <td class="text-end fw-bold text-danger">
+                            {% with total=0 %}
+                            {{ items|length }} items
+                            {% endwith %}
+                        </td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-check-circle display-4 d-block mb-3 text-success"></i>
+            <p>No unapproved items found. All requisition items are approved!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

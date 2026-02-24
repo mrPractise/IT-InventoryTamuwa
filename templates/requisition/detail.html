@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}{{ req.req_no }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+    <!-- Left: Details -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-receipt me-2"></i>{{ req.req_no }} — {{ req.title }}</span>
+                <div>
+                {% if req.status == 'Bought' %}
+                    <span class="badge bg-purple text-white" style="background:#6f42c1 !important;">
+                        <i class="bi bi-bag-check me-1"></i>Bought — Locked
+                    </span>
+                {% elif user.is_superuser or user.profile.role in 'super_admin,admin' %}
+                <a href="{% url 'requisition:update' req.pk %}" class="btn btn-sm btn-warning">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </a>
+                {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Status:</strong><br>
+                        {% if req.status == 'Approved' %}
+                            <span class="badge bg-success fs-6">{{ req.status }}</span>
+                        {% elif req.status == 'Rejected' %}
+                            <span class="badge bg-danger fs-6">{{ req.status }}</span>
+                        {% elif req.status == 'On Hold' %}
+                            <span class="badge bg-warning text-dark fs-6">{{ req.status }}</span>
+                        {% elif req.status == 'Bought' %}
+                            <span class="badge fs-6" style="background:#6f42c1;">{{ req.status }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary fs-6">{{ req.status }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Created By:</strong><br>
+                        {{ req.created_by.get_full_name|default:req.created_by.username|default:"—" }}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Date Created:</strong><br>
+                        {{ req.created_at|date:"d/m/Y" }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Last Updated:</strong><br>
+                        {{ req.updated_at|date:"d/m/Y" }}
+                    </div>
+                </div>
+                {% if req.description %}
+                <div class="mb-3">
+                    <strong>Description / Summary:</strong>
+                    <p class="text-muted mt-1">{{ req.description }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-list-ul me-2"></i>Items / Services
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Item / Service</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in req.items.all %}
+                            <tr class="{% if not item.is_approved %}table-danger{% endif %}">
+                                <td class="{% if not item.is_approved %}text-decoration-line-through text-muted{% endif %}">
+                                    {{ forloop.counter }}
+                                </td>
+                                <td>
+                                    <span class="{% if not item.is_approved %}text-decoration-line-through text-muted{% endif %}">
+                                        {{ item.item_name }}
+                                    </span>
+                                    {% if not item.is_approved %}
+                                    <span class="badge bg-danger ms-1" title="Not approved">
+                                        <i class="bi bi-x-circle me-1"></i>Not Approved
+                                    </span>
+                                    {% if item.rejection_reason %}
+                                    <br><small class="text-muted fst-italic">Reason: {{ item.rejection_reason }}</small>
+                                    {% endif %}
+                                    {% endif %}
+                                </td>
+                                <td class="text-end {% if not item.is_approved %}text-decoration-line-through text-muted{% endif %}">
+                                    {{ item.unit_price|intcomma }}
+                                </td>
+                                <td class="text-center {% if not item.is_approved %}text-decoration-line-through text-muted{% endif %}">
+                                    {{ item.quantity }}
+                                </td>
+                                <td class="text-end {% if not item.is_approved %}text-decoration-line-through text-muted{% endif %}">
+                                    <strong>{{ item.total_price|intcomma }}</strong>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">No items on this requisition.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            {% if req.total_amount != req.total_amount_all %}
+                            <tr class="text-muted">
+                                <td colspan="4" class="text-end">Original Total (incl. not approved):</td>
+                                <td class="text-end text-decoration-line-through">{{ req.total_amount_all|intcomma }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr class="table-active">
+                                <td colspan="4" class="text-end fw-bold">Approved Total:</td>
+                                <td class="text-end fw-bold fs-5">{{ req.total_amount|intcomma }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Linked Assets -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-box-seam me-2"></i>Linked Assets
+            </div>
+            <div class="card-body">
+                {% for asset in req.assets.all %}
+                <div class="mb-2">
+                    <a href="{% url 'assets:detail' asset.pk %}">
+                        <i class="bi bi-box me-1"></i>{{ asset.asset_id }}
+                    </a>
+                    <small class="text-muted d-block">{{ asset.model_description }}</small>
+                </div>
+                {% empty %}
+                <p class="text-muted">No assets linked yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <a href="{% url 'requisition:list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+</div>
+
+{% with linked_issues=req.issues.all linked_projects=req.projects.all %}
+{% if linked_issues or linked_projects %}
+<div class="row g-3 mt-1">
+    {% if linked_issues %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-bug me-2"></i>Linked Issues <span class="badge bg-secondary ms-1">{{ linked_issues|length }}</span></div>
+            <div class="card-body p-2">
+                {% for issue in linked_issues %}
+                <a href="{% url 'issues:issue_detail' issue.pk %}" class="d-flex justify-content-between align-items-center text-decoration-none text-dark border rounded p-2 mb-1 bg-light">
+                    <span class="small fw-semibold">{{ issue.title }}</span>
+                    <span class="badge {% if issue.status == 'Open' %}bg-danger{% elif issue.status == 'Monitoring' %}bg-warning text-dark{% elif issue.status == 'Resolved' %}bg-success{% else %}bg-secondary{% endif %}">{{ issue.status }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if linked_projects %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-kanban me-2"></i>Linked Projects <span class="badge bg-secondary ms-1">{{ linked_projects|length }}</span></div>
+            <div class="card-body p-2">
+                {% for project in linked_projects %}
+                <a href="{% url 'issues:project_detail' project.pk %}" class="d-flex justify-content-between align-items-center text-decoration-none text-dark border rounded p-2 mb-1 bg-light">
+                    <span class="small fw-semibold">{{ project.title }}</span>
+                    <span class="badge {% if project.status == 'Done' %}bg-success{% elif project.status == 'Rejected' %}bg-danger{% else %}bg-secondary{% endif %}">{{ project.status }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% endblock %}

@@ -11,9 +11,6 @@
             <a href="{% url 'assets:export_excel' %}" class="btn btn-sm btn-success me-2">
                 <i class="bi bi-file-earmark-excel"></i> Export Excel
             </a>
-            <a href="{% url 'assets:export_pdf' %}" class="btn btn-sm btn-danger me-2">
-                <i class="bi bi-file-earmark-pdf"></i> Export PDF
-            </a>
             {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
             <a href="{% url 'assets:create' %}" class="btn btn-sm btn-primary">
                 <i class="bi bi-plus-circle"></i> Add Asset
@@ -78,19 +75,47 @@
 
         <!-- Assets Table -->
         <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
                     <tr>
-                        <th>Asset ID</th>
-                        <th>Category</th>
-                        <th>Model/Description</th>
+                        <th>
+                            <a href="?sort=asset_id&amp;dir={% if sort_by == 'asset_id' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;search={{ search_query }}&amp;category={{ category_filter }}&amp;status={{ status_filter }}&amp;assigned={{ assigned_filter }}" class="text-dark text-decoration-none">
+                                Asset ID {% if sort_by == 'asset_id' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort=category&amp;dir={% if sort_by == 'category' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;search={{ search_query }}&amp;category={{ category_filter }}&amp;status={{ status_filter }}&amp;assigned={{ assigned_filter }}" class="text-dark text-decoration-none">
+                                Category {% if sort_by == 'category' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort=model&amp;dir={% if sort_by == 'model' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;search={{ search_query }}&amp;category={{ category_filter }}&amp;status={{ status_filter }}&amp;assigned={{ assigned_filter }}" class="text-dark text-decoration-none">
+                                Model/Description {% if sort_by == 'model' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
                         <th>Serial Number</th>
                         <th>Assigned To</th>
-                        <th>Status</th>
+                        <th>
+                            <a href="?sort=vendor&amp;dir={% if sort_by == 'vendor' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;search={{ search_query }}&amp;category={{ category_filter }}&amp;status={{ status_filter }}&amp;assigned={{ assigned_filter }}" class="text-dark text-decoration-none">
+                                Vendor {% if sort_by == 'vendor' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort=cost&amp;dir={% if sort_by == 'cost' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;search={{ search_query }}&amp;category={{ category_filter }}&amp;status={{ status_filter }}&amp;assigned={{ assigned_filter }}" class="text-dark text-decoration-none">
+                                Cost {% if sort_by == 'cost' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>Req No.</th>
+                        <th>
+                            <a href="?sort=status&amp;dir={% if sort_by == 'status' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;search={{ search_query }}&amp;category={{ category_filter }}&amp;status={{ status_filter }}&amp;assigned={{ assigned_filter }}" class="text-dark text-decoration-none">
+                                Status {% if sort_by == 'status' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
+                    {% load humanize %}
                     {% for asset in page_obj %}
                     <tr>
                         <td><strong>{{ asset.asset_id }}</strong></td>
@@ -107,6 +132,17 @@
                             <span class="text-muted small">
                                 <i class="bi bi-building me-1"></i>{{ asset.department.name }}
                             </span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted">{{ asset.purchased_from|default:"—" }}</td>
+                        <td class="small">{% if asset.purchase_cost %}{{ asset.purchase_cost|intcomma }}{% else %}—{% endif %}</td>
+                        <td>
+                            {% if asset.requisition %}
+                            <a href="{% url 'requisition:detail' asset.requisition.pk %}" class="badge bg-info text-dark text-decoration-none">
+                                {{ asset.requisition.req_no }}
+                            </a>
                             {% else %}
                             <span class="text-muted">—</span>
                             {% endif %}
@@ -129,7 +165,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted">No assets found</td>
+                        <td colspan="10" class="text-center text-muted">No assets found</td>
                     </tr>
                     {% endfor %}
                 </tbody>

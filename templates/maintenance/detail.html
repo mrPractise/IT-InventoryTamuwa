@@ -1,11 +1,15 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block page_title %}Maintenance Detail{% endblock %}
 
 {% block content %}
 <div class="card">
-    <div class="card-header">
-        <i class="bi bi-tools"></i> Maintenance Log Details
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-tools"></i> Maintenance Log Details</span>
+        <a href="{% url 'maintenance:list' %}" class="btn btn-sm btn-light">
+            <i class="bi bi-arrow-left me-1"></i>Back to Maintenance
+        </a>
     </div>
     <div class="card-body">
         <div class="row mb-3">
@@ -42,19 +46,19 @@
                 {% endif %}
             </div>
             <div class="col-md-6">
-                <strong>Department:</strong><br>
-                {{ log.asset.department.name|default:"N/A" }}
+                <strong>Model / Description:</strong><br>
+                {{ log.asset.model_description|default:"N/A" }}
             </div>
         </div>
 
         <div class="row mb-3">
             <div class="col-md-6">
                 <strong>Date Reported:</strong><br>
-                {{ log.date_reported|date:"M d, Y" }}
+                {{ log.date_reported|date:"d/m/Y" }}
             </div>
             <div class="col-md-6">
                 <strong>Date Completed:</strong><br>
-                {{ log.date_completed|date:"M d, Y"|default:"Not completed" }}
+                {{ log.date_completed|date:"d/m/Y"|default:"Not completed" }}
             </div>
         </div>
 
@@ -70,7 +74,28 @@
             </div>
             <div class="col-md-6">
                 <strong>Cost of Repair:</strong><br>
-                ${{ log.cost_of_repair|default:"0.00" }}
+                {{ log.cost_of_repair|default:"0.00"|intcomma }}
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>Performed By:</strong><br>
+                {% if log.performed_by %}
+                {{ log.performed_by.full_name }}
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <strong>Requisition No.:</strong><br>
+                {% if log.requisition %}
+                <a href="{% url 'requisition:detail' log.requisition.pk %}" class="badge bg-info text-dark text-decoration-none">
+                    {{ log.requisition.req_no }}
+                </a>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
             </div>
         </div>
 
@@ -78,6 +103,23 @@
         <div class="mb-3">
             <strong>Notes:</strong><br>
             <p class="text-muted">{{ log.notes }}</p>
+        </div>
+        {% endif %}
+
+        {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
+        <div class="mt-4">
+            <a href="{% url 'maintenance:update' log.pk %}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit Maintenance Log
+            </a>
+            <a href="{% url 'maintenance:list' %}" class="btn btn-secondary ms-2">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+        </div>
+        {% else %}
+        <div class="mt-4">
+            <a href="{% url 'maintenance:list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
         </div>
         {% endif %}
     </div>

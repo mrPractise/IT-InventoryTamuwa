@@ -45,7 +45,8 @@
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, #3498db, #764ba2);
+        background: #2563a8;
+
     }
 
     /* Avatar circle */
@@ -186,7 +187,7 @@
 
 <!-- Tabs -->
 <div class="tab-section">
-    <button class="tab-pill active" onclick="switchTab('people', this)">
+    <button class="tab-pill" onclick="switchTab('people', this)">
         <i class="bi bi-person-check me-1"></i> People
         <span class="ms-1 badge bg-primary bg-opacity-10 text-primary">{{ people.count }}</span>
     </button>
@@ -194,7 +195,7 @@
         <i class="bi bi-building me-1"></i> Departments
         <span class="ms-1 badge bg-success bg-opacity-10 text-success">{{ departments.count }}</span>
     </button>
-    <button class="tab-pill" onclick="switchTab('all', this)">
+    <button class="tab-pill active" onclick="switchTab('all', this)">
         <i class="bi bi-grid me-1"></i> All
     </button>
 
@@ -211,7 +212,7 @@
 </div>
 
 <!-- PEOPLE section -->
-<div id="people-section" class="tab-content active">
+<div id="people-section" class="tab-content" style="display: none;">
     <div class="row g-4" id="people-list">
         {% for person in people %}
         <div class="col-md-6 col-lg-4 directory-item person-card" data-name="{{ person.full_name }}"
@@ -265,8 +266,7 @@
                         </div>
                         <div class="flex-grow-1">
                             <h5 class="card-title mb-1 text-truncate">{{ dept.name }}</h5>
-                            <p class="text-muted mb-2 small">{{ dept.description|truncatechars:50|default:"Organization
-                                department" }}</p>
+
                             <div class="d-flex align-items-center">
                                 <span
                                     class="badge {% if dept.asset_count > 0 %}bg-success{% else %}bg-secondary{% endif %} bg-opacity-10 {% if dept.asset_count > 0 %}text-success{% else %}text-secondary{% endif %} rounded-pill">
@@ -288,8 +288,8 @@
     </div>
 </div>
 
-<!-- ALL combined section (hidden initially) -->
-<div id="all-section" class="tab-content" style="display: none;">
+<!-- ALL combined section (default visible) -->
+<div id="all-section" class="tab-content" style="display: block;">
     <div class="row g-4" id="all-list">
         <!-- populated by filterDirectory() or shown similarly -->
     </div>

@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Issue: {{ issue.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bug me-2"></i>{{ issue.title }}</span>
+                <div class="d-flex gap-2">
+                    {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
+                    {% if issue.status != 'Closed' %}
+                    <a href="{% url 'issues:issue_update' issue.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil me-1"></i>Edit</a>
+                    {% endif %}
+                    {% endif %}
+                    <a href="{% url 'issues:home' %}?tab=issues" class="btn btn-sm btn-light"><i class="bi bi-arrow-left me-1"></i>Back</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Priority</small>
+                        <span class="badge bg-{% if issue.priority == 'Critical' %}danger{% elif issue.priority == 'High' %}warning text-dark{% elif issue.priority == 'Medium' %}info text-dark{% else %}light text-dark border{% endif %}">{{ issue.priority }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Status</small>
+                        <span class="badge rounded-pill {% if issue.status == 'Open' %}bg-danger{% elif issue.status == 'Monitoring' %}bg-warning text-dark{% elif issue.status == 'Resolved' %}bg-success{% else %}bg-secondary{% endif %}">{{ issue.status }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Reported By</small>
+                        <strong>{{ issue.reported_by.get_full_name|default:issue.reported_by.username|default:"—" }}</strong>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Asset</small>
+                        {% if issue.asset %}
+                        <a href="{% url 'assets:detail' issue.asset.pk %}">{{ issue.asset.asset_id }} — {{ issue.asset.model_description }}</a>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Department</small>
+                        {{ issue.department.name|default:"—" }}
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Linked Requisition</small>
+                        {% if issue.requisition %}
+                        <a href="{% url 'requisition:detail' issue.requisition.pk %}" class="badge bg-info text-dark text-decoration-none">{{ issue.requisition.req_no }}</a>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <small class="text-muted d-block">Date Reported</small>
+                    {{ issue.created_at|date:"d/m/Y" }}
+                </div>
+                {% if issue.description %}
+                <div>
+                    <small class="text-muted d-block mb-1">Description</small>
+                    <div class="border rounded p-3 bg-light">{{ issue.description|linebreaks }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-chat-left-text me-2"></i>Activity Log
+                <span class="badge bg-secondary ms-1">{{ comments|length }}</span>
+            </div>
+            <div class="card-body">
+                {% for comment in comments %}
+                <div class="d-flex mb-3">
+                    <div class="me-3 text-center" style="min-width:40px">
+                        <i class="bi bi-person-circle fs-4 text-muted"></i>
+                        <div class="text-muted" style="font-size:0.7rem">{{ comment.created_at|date:"d/m" }}</div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="border rounded p-2 bg-light">
+                            <strong class="small">{{ comment.author.get_full_name|default:comment.author.username }}</strong>
+                            <span class="text-muted small ms-2">{{ comment.created_at|date:"d/m/Y H:i" }}</span>
+                            <div class="mt-1">{{ comment.body|linebreaks }}</div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center py-3 mb-0">No comments yet.</p>
+                {% endfor %}
+
+                {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
+                <hr class="my-3">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ comment_form.body }}
+                    <button type="submit" class="btn btn-sm btn-primary mt-2">
+                        <i class="bi bi-send me-1"></i>Post Comment
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-info-circle me-2"></i>Summary</div>
+            <div class="card-body small">
+                <div class="mb-2"><span class="text-muted">Status:</span>
+                    <span class="badge ms-1 {% if issue.status == 'Open' %}bg-danger{% elif issue.status == 'Monitoring' %}bg-warning text-dark{% elif issue.status == 'Resolved' %}bg-success{% else %}bg-secondary{% endif %}">{{ issue.status }}</span>
+                </div>
+                <div class="mb-2"><span class="text-muted">Priority:</span> <strong>{{ issue.priority }}</strong></div>
+                <div class="mb-2"><span class="text-muted">Comments:</span> {{ comments|length }}</div>
+                <div class="mb-2"><span class="text-muted">Last updated:</span> {{ issue.updated_at|date:"d/m/Y H:i" }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

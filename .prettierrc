@@ -1,6 +1,7 @@
 {
-  "htmlWhitespaceSensitivity": "ignore",
+  "htmlWhitespaceSensitivity": "css",
   "printWidth": 99999,
   "proseWrap": "never",
-  "embeddedLanguageFormatting": "off"
+  "embeddedLanguageFormatting": "off",
+  "plugins": ["prettier-plugin-django"]
 }

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-kanban me-2"></i>{{ title }}</span>
+        <a href="{% if project %}{% url 'issues:project_detail' project.pk %}{% else %}{% url 'issues:home' %}?tab=projects{% endif %}" class="btn btn-sm btn-light">
+            <i class="bi bi-arrow-left me-1"></i>Back
+        </a>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Basic info -->
+            <div class="row">
+                <div class="col-md-8">{{ form.title|as_crispy_field }}</div>
+                <div class="col-md-2">{{ form.priority|as_crispy_field }}</div>
+                <div class="col-md-2">{{ form.status|as_crispy_field }}</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">{{ form.date|as_crispy_field }}</div>
+                <div class="col-md-8">{{ form.description|as_crispy_field }}</div>
+            </div>
+
+            {{ form.problem_statement|as_crispy_field }}
+            {{ form.cost_breakdown|as_crispy_field }}
+            {{ form.conclusion|as_crispy_field }}
+
+            <!-- Conditional reason fields -->
+            <div id="pending-reason-wrap">{{ form.pending_reason|as_crispy_field }}</div>
+            <div id="rejected-reason-wrap">{{ form.rejected_reason|as_crispy_field }}</div>
+
+            <!-- M2M fields -->
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Asset Categories <small class="text-muted fw-normal">(shows available count on project detail)</small></label>
+                    <div class="border rounded p-3" style="max-height:200px;overflow-y:auto;">
+                        {{ form.categories }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Linked Requisitions</label>
+                    <div class="border rounded p-3" style="max-height:200px;overflow-y:auto;">
+                        {{ form.requisitions }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save</button>
+                <a href="{% if project %}{% url 'issues:project_detail' project.pk %}{% else %}{% url 'issues:home' %}?tab=projects{% endif %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleReasonFields() {
+    const status = document.querySelector('[name=status]').value;
+    document.getElementById('pending-reason-wrap').style.display = (status === 'Pending') ? '' : 'none';
+    document.getElementById('rejected-reason-wrap').style.display = (status === 'Rejected') ? '' : 'none';
+}
+document.addEventListener('DOMContentLoaded', function () {
+    toggleReasonFields();
+    document.querySelector('[name=status]').addEventListener('change', toggleReasonFields);
+});
+</script>
+{% endblock %}
