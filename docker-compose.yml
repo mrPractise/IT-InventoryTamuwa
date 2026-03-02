@@ -16,6 +16,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - inventory_network
 
   web:
     build: .
@@ -23,14 +25,35 @@ services:
     env_file: .env
     environment:
       - DB_HOST=db
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - media_files:/app/media
+      - static_files:/app/staticfiles
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - inventory_network
+
+  nginx:
+    build: ./nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - media_files:/app/media
+      - static_files:/app/staticfiles
+    depends_on:
+      - web
+    networks:
+      - inventory_network
 
 volumes:
   postgres_data:
   media_files:
+  static_files:
+
+networks:
+  inventory_network:
+    driver: bridge

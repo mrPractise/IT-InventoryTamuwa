@@ -21,6 +21,11 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
+# Nginx proxy settings
+USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=False, cast=bool)
+if config('SECURE_PROXY_SSL_HEADER', default=''):
+    SECURE_PROXY_SSL_HEADER = tuple(config('SECURE_PROXY_SSL_HEADER').split(','))
+
 
 # Application definition
 
