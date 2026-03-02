@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block page_title %}Issues{% endblock %}
+
+{% block content %}
+<div class="card bg-white p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 mt-1">
+        <h6 class="mb-0 fw-bold text-muted">All Issues</h6>
+        {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
+        <a href="{% url 'issues:issue_create' %}" class="btn btn-sm btn-success">
+            <i class="bi bi-plus-circle me-1"></i>New Issue
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Issue filters -->
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-4">
+            <input type="text" name="i_search" value="{{ i_search }}" class="form-control form-control-sm"
+                placeholder="Search title or description...">
+        </div>
+        <div class="col-md-2">
+            <select name="i_priority" class="form-select form-select-sm">
+                <option value="">All Priorities</option>
+                {% for val, label, is_selected in issue_priority_choices %}
+                <option value="{{ val }}" {% if is_selected %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="i_status" class="form-select form-select-sm">
+                <option value="">All Statuses</option>
+                {% for val, label, is_selected in issue_status_choices %}
+                <option value="{{ val }}" {% if is_selected %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 d-flex gap-2">
+            <button type="submit" class="btn btn-sm btn-primary flex-fill"><i
+                    class="bi bi-funnel me-1"></i>Filter</button>
+            <a href="{% url 'issues:issue_list' %}" class="btn btn-sm btn-outline-secondary flex-fill">Clear</a>
+        </div>
+    </form>
+
+    {% if issues_page %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>Title</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Asset</th>
+                    <th>Requisition</th>
+                    <th>Reported</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for issue in issues_page %}
+                <tr>
+                    <td><a href="{% url 'issues:issue_detail' issue.pk %}" class="fw-semibold text-decoration-none">{{
+                            issue.title }}</a></td>
+                    <td>
+                        <span
+                            class="badge bg-{% if issue.priority == 'Critical' %}danger{% elif issue.priority == 'High' %}warning text-dark{% elif issue.priority == 'Medium' %}info text-dark{% else %}light text-dark border{% endif %}">
+                            {{ issue.priority }}
+                        </span>
+                    </td>
+                    <td>
+                        <span
+                            class="badge rounded-pill {% if issue.status == 'Open' %}bg-danger{% elif issue.status == 'Monitoring' %}bg-warning text-dark{% elif issue.status == 'Resolved' %}bg-success{% else %}bg-secondary{% endif %}">
+                            {{ issue.status }}
+                        </span>
+                    </td>
+                    <td class="small">{% if issue.asset %}<a href="{% url 'assets:detail' issue.asset.pk %}">{{
+                            issue.asset.asset_id }}</a>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                    <td class="small">{% if issue.requisition %}<a
+                            href="{% url 'requisition:detail' issue.requisition.pk %}">{{ issue.requisition.req_no
+                            }}</a>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                    <td class="text-nowrap small text-muted">{{ issue.created_at|date:"d/m/Y" }}</td>
+                    <td>
+                        <a href="{% url 'issues:issue_detail' issue.pk %}" class="btn btn-sm btn-info" title="View"><i
+                                class="bi bi-eye"></i></a>
+                        {% if user.is_superuser or user.profile.role in 'super_admin,admin' %}
+                        {% if issue.status != 'Closed' %}
+                        <a href="{% url 'issues:issue_update' issue.pk %}" class="btn btn-sm btn-warning"
+                            title="Edit"><i class="bi bi-pencil"></i></a>
+                        {% else %}
+                        <button class="btn btn-sm btn-secondary" disabled title="Closed"><i
+                                class="bi bi-lock"></i></button>
+                        {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No issues found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if issues_page.has_other_pages %}
+    <nav>
+        <ul class="pagination pagination-sm justify-content-end mb-0">
+            {% if issues_page.has_previous %}<li class="page-item"><a class="page-link"
+                    href="?page={{ issues_page.previous_page_number }}&i_search={{ i_search }}&i_priority={{ i_priority }}&i_status={{ i_status }}">«</a>
+            </li>{% endif %}
+            <li class="page-item active"><span class="page-link">{{ issues_page.number }}/{{
+                    issues_page.paginator.num_pages }}</span></li>
+            {% if issues_page.has_next %}<li class="page-item"><a class="page-link"
+                    href="?page={{ issues_page.next_page_number }}&i_search={{ i_search }}&i_priority={{ i_priority }}&i_status={{ i_status }}">»</a>
+            </li>{% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

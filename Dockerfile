@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libjpeg-dev \
     zlib1g-dev \
+    dos2unix \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies first (layer caching)
@@ -21,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the project
 COPY . .
+
+# Fix Windows CRLF line endings so the shell script works in Linux
+RUN dos2unix /app/entrypoint.sh
 
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh

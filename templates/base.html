@@ -223,9 +223,15 @@
                 </a>
             </li>
             <li>
-                <a href="{% url 'issues:home' %}"
-                    class="{% if request.resolver_match.app_name == 'issues' %}active{% endif %}">
-                    <i class="bi bi-bug"></i> Issues &amp; Projects
+                <a href="{% url 'issues:issue_list' %}"
+                    class="{% if request.resolver_match.app_name == 'issues' and 'project' not in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-bug"></i> Issues
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'issues:project_list' %}"
+                    class="{% if 'project' in request.resolver_match.url_name %}active{% endif %}">
+                    <i class="bi bi-kanban"></i> Projects
                 </a>
             </li>
             <li>
@@ -253,7 +259,7 @@
             </li>
             {% if user.is_superuser or user.profile.role == 'super_admin' or user.profile.role == 'admin' %}
             <li>
-                <a href="/admin/">
+                <a href="/admin/" target="_blank">
                     <i class="bi bi-gear"></i> Admin Panel
                 </a>
             </li>
