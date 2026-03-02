@@ -36,12 +36,15 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'django_extensions',
+    # Core apps
     'assets.apps.AssetsConfig',
     'dashboard',
     'maintenance.apps.MaintenanceConfig',
     'requisition.apps.RequisitionConfig',
     'issues.apps.IssuesConfig',
     'users',
+    # API app - centralized API endpoints
+    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
