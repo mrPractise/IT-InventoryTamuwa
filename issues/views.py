@@ -110,13 +110,21 @@ def issue_detail(request, pk):
 @login_required
 @role_required(['super_admin', 'admin'])
 def issue_create(request):
-    form = IssueForm(request.POST or None)
-    if form.is_valid():
-        issue = form.save(commit=False)
-        issue.reported_by = request.user
-        issue.save()
-        messages.success(request, f'Issue "{issue.title}" created.')
-        return redirect('issues:issue_detail', pk=issue.pk)
+    if request.method == 'POST':
+        form = IssueForm(request.POST)
+        if form.is_valid():
+            issue = form.save(commit=False)
+            issue.reported_by = request.user
+            issue.save()
+            messages.success(request, f'Issue "{issue.title}" created.')
+            return redirect('issues:issue_detail', pk=issue.pk)
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+    else:
+        form = IssueForm()
     return render(request, 'issues/issue_form.html', {'form': form, 'title': 'New Issue'})
 
 
@@ -127,11 +135,20 @@ def issue_update(request, pk):
     if issue.status == 'Closed':
         messages.error(request, 'This issue is Closed and cannot be edited.')
         return redirect('issues:issue_detail', pk=pk)
-    form = IssueForm(request.POST or None, instance=issue)
-    if form.is_valid():
-        form.save()
-        messages.success(request, f'Issue "{issue.title}" updated.')
-        return redirect('issues:issue_detail', pk=issue.pk)
+    
+    if request.method == 'POST':
+        form = IssueForm(request.POST, instance=issue)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Issue "{issue.title}" updated.')
+            return redirect('issues:issue_detail', pk=issue.pk)
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+    else:
+        form = IssueForm(instance=issue)
     return render(request, 'issues/issue_form.html', {
         'form': form, 'issue': issue, 'title': f'Edit Issue: {issue.title}'
     })
@@ -168,14 +185,22 @@ def project_detail(request, pk):
 @login_required
 @role_required(['super_admin', 'admin'])
 def project_create(request):
-    form = ProjectForm(request.POST or None)
-    if form.is_valid():
-        project = form.save(commit=False)
-        project.reported_by = request.user
-        project.save()
-        form.save_m2m()
-        messages.success(request, f'Project "{project.title}" created.')
-        return redirect('issues:project_detail', pk=project.pk)
+    if request.method == 'POST':
+        form = ProjectForm(request.POST)
+        if form.is_valid():
+            project = form.save(commit=False)
+            project.reported_by = request.user
+            project.save()
+            form.save_m2m()
+            messages.success(request, f'Project "{project.title}" created.')
+            return redirect('issues:project_detail', pk=project.pk)
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+    else:
+        form = ProjectForm()
     return render(request, 'issues/project_form.html', {'form': form, 'title': 'New Project'})
 
 
@@ -186,11 +211,20 @@ def project_update(request, pk):
     if project.status == 'Done':
         messages.error(request, 'This project is Done and cannot be edited.')
         return redirect('issues:project_detail', pk=pk)
-    form = ProjectForm(request.POST or None, instance=project)
-    if form.is_valid():
-        form.save()
-        messages.success(request, f'Project "{project.title}" updated.')
-        return redirect('issues:project_detail', pk=project.pk)
+    
+    if request.method == 'POST':
+        form = ProjectForm(request.POST, instance=project)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Project "{project.title}" updated.')
+            return redirect('issues:project_detail', pk=project.pk)
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+    else:
+        form = ProjectForm(instance=project)
     return render(request, 'issues/project_form.html', {
         'form': form, 'project': project, 'title': f'Edit: {project.title}'
     })

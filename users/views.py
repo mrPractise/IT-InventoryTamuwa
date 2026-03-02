@@ -118,6 +118,11 @@ def add_person_view(request):
             person = form.save()
             messages.success(request, f"Person {person.full_name} added successfully.")
             return redirect('users:directory')
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
     else:
         form = PersonForm()
     
@@ -134,6 +139,11 @@ def add_department_view(request):
             dept = form.save()
             messages.success(request, f"Department '{dept.name}' created successfully.")
             return redirect('users:directory')
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
     else:
         form = DepartmentForm()
     

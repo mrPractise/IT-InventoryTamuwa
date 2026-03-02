@@ -52,3 +52,6 @@ Thumbs.db
 
 # PostgreSQL
 *.sql.gz
+
+
+.qoder

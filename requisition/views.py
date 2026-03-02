@@ -45,6 +45,14 @@ def requisition_create(request):
             formset.save()
             messages.success(request, f'Requisition {req.req_no} created successfully!')
             return redirect('requisition:detail', pk=req.pk)
+        else:
+            # Display form validation errors
+            if form.errors:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{form.fields[field].label or field}: {error}")
+            if formset.errors:
+                messages.error(request, "Please check the items for errors.")
     else:
         form = RequisitionForm()
         formset = RequisitionItemFormSet()
@@ -78,6 +86,14 @@ def requisition_update(request, pk):
             formset.save()
             messages.success(request, f'Requisition {req.req_no} updated successfully!')
             return redirect('requisition:detail', pk=req.pk)
+        else:
+            # Display form validation errors
+            if form.errors:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"{form.fields[field].label or field}: {error}")
+            if formset.errors:
+                messages.error(request, "Please check the items for errors.")
     else:
         form = RequisitionForm(instance=req)
         formset = RequisitionItemFormSet(instance=req)

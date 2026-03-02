@@ -72,6 +72,11 @@ def maintenance_create(request):
 
             messages.success(request, f'Maintenance log for {log.asset.asset_id} created successfully!')
             return redirect('maintenance:detail', pk=log.pk)
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
     else:
         # Pre-select asset if passed in URL
         initial = {}
@@ -106,6 +111,11 @@ def maintenance_update(request, pk):
             updated_log.save()
             messages.success(request, f'Maintenance log updated successfully!')
             return redirect('maintenance:detail', pk=log.pk)
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
     else:
         form = MaintenanceLogForm(instance=log)
 

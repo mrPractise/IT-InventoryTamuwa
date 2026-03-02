@@ -141,6 +141,11 @@ def asset_create(request):
             
             messages.success(request, f'Asset {asset.asset_id} created successfully!')
             return redirect('assets:detail', pk=asset.pk)
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
     else:
         form = AssetForm()
     
@@ -163,6 +168,11 @@ def asset_update(request, pk):
             
             messages.success(request, f'Asset {asset.asset_id} updated successfully!')
             return redirect('assets:detail', pk=asset.pk)
+        else:
+            # Display form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
     else:
         form = AssetForm(instance=asset)
     

@@ -236,7 +236,7 @@
             </li>
             <li>
                 <a href="{% url 'requisition:list' %}"
-                    class="{% if request.resolver_match.app_name == 'requisition' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'requisition' and request.resolver_match.url_name != 'unapproved_items' %}active{% endif %}">
                     <i class="bi bi-receipt"></i> Requisitions
                 </a>
             </li>
@@ -290,9 +290,18 @@
         {% if messages %}
         <div class="messages">
             {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                {% if message.tags == 'error' %}
+                <i class="bi bi-exclamation-circle-fill me-2"></i>
+                {% elif message.tags == 'success' %}
+                <i class="bi bi-check-circle-fill me-2"></i>
+                {% elif message.tags == 'warning' %}
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                {% elif message.tags == 'info' %}
+                <i class="bi bi-info-circle-fill me-2"></i>
+                {% endif %}
                 {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             {% endfor %}
         </div>
@@ -312,14 +321,32 @@
             document.querySelector('.sidebar').classList.toggle('show');
         }
 
-        // Auto-dismiss alerts after 4 seconds
+        // Auto-dismiss alerts after 5 seconds with animation
         document.addEventListener('DOMContentLoaded', function () {
             const alerts = document.querySelectorAll('.messages .alert');
             alerts.forEach(function (alert) {
+                // Add initial animation
+                alert.style.opacity = '0';
+                alert.style.transform = 'translateY(-10px)';
+                alert.style.transition = 'all 0.3s ease';
+                
+                // Trigger entrance animation
+                setTimeout(function() {
+                    alert.style.opacity = '1';
+                    alert.style.transform = 'translateY(0)';
+                }, 100);
+                
+                // Auto-dismiss after 5 seconds
                 setTimeout(function () {
-                    const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
-                    bsAlert.close();
-                }, 4000);
+                    alert.style.opacity = '0';
+                    alert.style.transform = 'translateY(-10px)';
+                    setTimeout(function() {
+                        const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                        if (bsAlert) {
+                            bsAlert.close();
+                        }
+                    }, 300);
+                }, 5000);
             });
         });
     </script>
