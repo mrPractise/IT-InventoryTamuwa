@@ -33,9 +33,10 @@ class MaintenanceLogForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from requisition.models import Requisition
+        from technicians.models import Technician
         self.fields['asset'].queryset = Asset.objects.filter(is_deleted=False).order_by('asset_id')
         self.fields['action_taken'].queryset = ActionTakenOption.objects.filter(is_active=True).order_by('name')
-        self.fields['performed_by'].queryset = Person.objects.all().order_by('first_name', 'last_name')
+        self.fields['performed_by'].queryset = Technician.objects.filter(is_active=True).order_by('company_name', 'technician_name')
         self.fields['requisition'].queryset = Requisition.objects.all().order_by('-created_at')
         self.fields['action_taken'].required = False
         self.fields['date_completed'].required = False

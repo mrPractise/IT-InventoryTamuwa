@@ -23,8 +23,25 @@
                     class="btn btn-secondary">
                     <i class="bi bi-x-circle"></i> Cancel
                 </a>
+                <button type="button" class="btn btn-outline-warning" onclick="clearFormData(this)">
+                    <i class="bi bi-trash"></i> Clear Saved Data
+                </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    function clearFormData(button) {
+        const form = button.closest('form');
+        if (form && typeof FormPersistence !== 'undefined') {
+            FormPersistence.clearForm(form);
+            form.reset();
+            button.innerHTML = '<i class="bi bi-check"></i> Cleared!';
+            setTimeout(() => {
+                button.innerHTML = '<i class="bi bi-trash"></i> Clear Saved Data';
+            }, 2000);
+        }
+    }
+</script>
 {% endblock %}

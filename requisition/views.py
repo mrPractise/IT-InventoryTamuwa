@@ -118,3 +118,27 @@ def unapproved_items(request):
     return render(request, 'requisition/unapproved_items.html', {
         'items': items,
     })
+
+
+@login_required
+def bought_items_queue(request):
+    """List all requisition ASSET items with Bought status that haven't been added to assets yet."""
+    from assets.models import Asset
+    
+    # Get all bought ASSET items (not services) that are not yet processed
+    bought_items = (
+        RequisitionItem.objects
+        .filter(
+            requisition__status='Bought', 
+            is_approved=True,
+            item_type='Asset',  # Only Asset items, not Services
+            is_processed=False  # Not yet added to assets
+        )
+        .select_related('requisition')
+        .order_by('-requisition__created_at', 'item_name')
+    )
+    
+    return render(request, 'requisition/bought_items_queue.html', {
+        'items': bought_items,
+        'total_count': bought_items.count(),
+    })

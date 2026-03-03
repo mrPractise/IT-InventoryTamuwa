@@ -38,11 +38,12 @@
         <div class="stat-card">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <h6 class="text-muted mb-1">Available</h6>
-                    <h2 class="mb-0 text-info">{{ status_available }}</h2>
+                    <h6 class="text-muted mb-1">Items Bought</h6>
+                    <h2 class="mb-0 text-info">{{ total_items_bought }}</h2>
+                    <small class="text-muted">KES {{ total_value_bought|floatformat:0 }}</small>
                 </div>
                 <div class="stat-icon text-info">
-                    <i class="bi bi-circle"></i>
+                    <i class="bi bi-cart-check"></i>
                 </div>
             </div>
         </div>

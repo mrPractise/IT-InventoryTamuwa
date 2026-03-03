@@ -364,10 +364,10 @@ def export_assets_excel(assets):
     ws_past.append(['Asset_ID', 'User', 'Start Date', 'End Date'])
     style_header_row(ws_past)
 
-    for a in AssignmentHistory.objects.select_related('asset', 'user').order_by('-start_date'):
+    for a in AssignmentHistory.objects.select_related('asset', 'person').order_by('-start_date'):
         ws_past.append([
             a.asset.asset_id if a.asset else '',
-            (a.user.get_full_name() or a.user.username) if a.user else '',
+            a.person.full_name if a.person else (a.department.name if a.department else 'Unassigned'),
             a.start_date.strftime('%d/%m/%Y') if a.start_date else '',
             a.end_date.strftime('%d/%m/%Y') if a.end_date else 'Current',
         ])

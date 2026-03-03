@@ -21,6 +21,7 @@ urlpatterns = [
     path("requisition/", include("requisition.urls")),
     path("issues/", include("issues.urls")),
     path("users/", include("users.urls")),
+    path("technicians/", include("technicians.urls")),
     path("accounts/login/", user_views.login_view, name="login"),
     # Centralized API endpoints
     path("api/", include("api.urls")),

@@ -25,13 +25,18 @@
 
             <!-- Main form fields -->
             <div class="row g-3 mb-4">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label fw-semibold">Requisition No. <span class="text-danger">*</span></label>
                     {{ form.req_no }}
-                    <div class="form-text text-muted">Copy from your physical book (must be unique).</div>
+                    <div class="form-text text-muted">Copy from your physical book.</div>
                     {% if form.req_no.errors %}<div class="text-danger small">{{ form.req_no.errors }}</div>{% endif %}
                 </div>
-                <div class="col-md-5">
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Company <span class="text-danger">*</span></label>
+                    {{ form.company }}
+                    {% if form.company.errors %}<div class="text-danger small">{{ form.company.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
                     <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
                     {{ form.title }}
                     {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors }}</div>{% endif %}
@@ -58,7 +63,8 @@
             <table class="table align-middle" id="items-table">
                 <thead class="table-light">
                     <tr>
-                        <th style="width:38%">Item / Service</th>
+                        <th style="width:10%">Type</th>
+                        <th style="width:28%">Item / Service</th>
                         <th style="width:15%">Unit Price</th>
                         <th style="width:10%">Qty</th>
                         <th style="width:12%">Total</th>
@@ -72,6 +78,10 @@
                     <tr class="item-row{% if item_form.instance.pk and not item_form.instance.is_approved %} table-danger{% endif %}">
                         <td>
                             {{ item_form.id }}
+                            {{ item_form.item_type }}
+                            {% if item_form.item_type.errors %}<div class="text-danger small">{{ item_form.item_type.errors }}</div>{% endif %}
+                        </td>
+                        <td>
                             {{ item_form.item_name }}
                             {% if item_form.item_name.errors %}<div class="text-danger small">{{ item_form.item_name.errors }}</div>{% endif %}
                         </td>
@@ -113,6 +123,12 @@
                 <tr class="item-row">
                     <td>
                         <input type="hidden" name="items-__prefix__-id">
+                        <select name="items-__prefix__-item_type" class="form-control item-type">
+                            <option value="Asset">Asset</option>
+                            <option value="Service">Service</option>
+                        </select>
+                    </td>
+                    <td>
                         <input type="text" name="items-__prefix__-item_name" class="form-control" placeholder="Item or service description">
                     </td>
                     <td><input type="number" name="items-__prefix__-unit_price" class="form-control item-unit-price" step="0.01" min="0" value="0"></td>
@@ -138,6 +154,9 @@
                     class="btn btn-secondary ms-2">
                     <i class="bi bi-x-circle me-1"></i>Cancel
                 </a>
+                <button type="button" class="btn btn-outline-warning ms-2" onclick="clearFormData(this)">
+                    <i class="bi bi-trash"></i> Clear Saved Data
+                </button>
             </div>
         </form>
     </div>
@@ -217,5 +236,15 @@
 
     // Init totals on page load
     updateTotals();
+    
+    // Clear form data function
+    function clearFormData(button) {
+        const form = button.closest('form');
+        if (form && typeof FormPersistence !== 'undefined') {
+            FormPersistence.clearForm(form);
+            // Reload page to reset formset
+            window.location.reload();
+        }
+    }
 </script>
 {% endblock %}

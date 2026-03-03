@@ -10,8 +10,15 @@ class Requisition(models.Model):
         ('On Hold', 'On Hold'),
         ('Bought', 'Bought'),
     ]
+    
+    COMPANY_CHOICES = [
+        ('Tera', 'Tera'),
+        ('Flux', 'Flux'),
+        ('Tamuwa', 'Tamuwa'),
+    ]
 
-    req_no = models.CharField(max_length=20, unique=True, db_index=True, verbose_name="Requisition No.")
+    req_no = models.CharField(max_length=20, db_index=True, verbose_name="Requisition No.")
+    company = models.CharField(max_length=20, choices=COMPANY_CHOICES, default='Tamuwa', verbose_name="Company")
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True, verbose_name="Summary / Description")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending', db_index=True)
@@ -21,9 +28,10 @@ class Requisition(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        unique_together = ['req_no', 'company']  # Same req_no allowed for different companies
 
     def __str__(self):
-        return f"{self.req_no} – {self.title}"
+        return f"[{self.company}] {self.req_no} – {self.title}"
 
     @property
     def total_amount(self):
@@ -40,7 +48,13 @@ class Requisition(models.Model):
 
 
 class RequisitionItem(models.Model):
+    ITEM_TYPE_CHOICES = [
+        ('Asset', 'Asset'),
+        ('Service', 'Service'),
+    ]
+    
     requisition = models.ForeignKey(Requisition, on_delete=models.CASCADE, related_name='items')
+    item_type = models.CharField(max_length=10, choices=ITEM_TYPE_CHOICES, default='Asset', verbose_name="Type")
     item_name = models.CharField(max_length=200, verbose_name="Item / Service")
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     quantity = models.PositiveIntegerField(default=1)
@@ -49,6 +63,10 @@ class RequisitionItem(models.Model):
         max_length=255, blank=True, default='',
         verbose_name="Reason (if not approved)"
     )
+    # Track if this item has been processed (added to assets for assets, completed for services)
+    is_processed = models.BooleanField(default=False, verbose_name="Processed")
+    processed_at = models.DateTimeField(null=True, blank=True)
+    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_items')
 
     class Meta:
         ordering = ['id']

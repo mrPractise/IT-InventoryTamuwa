@@ -5,6 +5,7 @@ from django.utils import timezone
 from datetime import timedelta
 from assets.models import Asset, Category, StatusOption
 from maintenance.models import MaintenanceLog
+from requisition.models import Requisition, RequisitionItem
 
 
 @login_required
@@ -31,6 +32,20 @@ def dashboard_home(request):
         maintenance_status='Open',
         date_reported=timezone.now().date()
     ).count()
+    
+    # Total items bought (from requisitions with Bought status)
+    total_items_bought = RequisitionItem.objects.filter(
+        requisition__status='Bought',
+        is_approved=True
+    ).count()
+    
+    # Total value of items bought
+    total_value_bought = sum(
+        item.total_price for item in RequisitionItem.objects.filter(
+            requisition__status='Bought',
+            is_approved=True
+        )
+    )
     
     # Category distribution
     category_distribution = Category.objects.annotate(
@@ -69,6 +84,8 @@ def dashboard_home(request):
         'status_values': status_values_json,
         'assets_this_month': assets_this_month,
         'maintenance_today': maintenance_today,
+        'total_items_bought': total_items_bought,
+        'total_value_bought': total_value_bought,
         'category_data': category_data,
         'category_labels': category_labels_json,
         'category_values': category_values_json,

@@ -1,59 +1,53 @@
+"""
+Initialize default data for the ICT Inventory system.
+Run this after migrations: python manage.py init_defaults
+"""
 from django.core.management.base import BaseCommand
-from assets.models import StatusOption, Category
+from assets.models import StatusOption
+from maintenance.models import ActionTakenOption
 
 
 class Command(BaseCommand):
-    help = 'Initialize default status options and categories'
+    help = 'Initialize default status options and action taken options'
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **kwargs):
+        self.stdout.write('Initializing default data...')
+        
         # Create default status options
-        statuses = [
+        status_options = [
             {'name': 'In Use', 'color': '#28a745'},
             {'name': 'Available', 'color': '#17a2b8'},
+            {'name': 'Under Maintenance', 'color': '#ffc107'},
             {'name': 'Missing', 'color': '#dc3545'},
             {'name': 'Retired', 'color': '#6c757d'},
-            {'name': 'Under Maintenance', 'color': '#ffc107'},
         ]
         
-        for status_data in statuses:
+        for option in status_options:
             status, created = StatusOption.objects.get_or_create(
-                name=status_data['name'],
-                defaults={'color': status_data['color']}
+                name=option['name'],
+                defaults={'color': option['color'], 'is_active': True}
             )
             if created:
-                self.stdout.write(
-                    self.style.SUCCESS(f'Created status: {status.name}')
-                )
+                self.stdout.write(self.style.SUCCESS(f'Created status: {option["name"]}'))
             else:
-                self.stdout.write(
-                    self.style.WARNING(f'Status already exists: {status.name}')
-                )
+                self.stdout.write(f'Status already exists: {option["name"]}')
         
-        # Create default categories
-        categories = [
-            'Laptop',
-            'Desktop',
-            'Monitor',
-            'Keyboard',
-            'Mouse',
-            'Printer',
-            'Phone',
-            'Tablet',
-            'Server',
-            'Network Equipment',
+        # Create default action taken options
+        action_options = [
+            {'name': 'Investigation', 'description': 'Initial investigation of the issue'},
+            {'name': 'Waiting Approval', 'description': 'Waiting for approval to proceed'},
+            {'name': 'To Nairobi', 'description': 'Sent to Nairobi for repairs'},
+            {'name': 'Decommissioned', 'description': 'Asset has been decommissioned'},
         ]
         
-        for cat_name in categories:
-            category, created = Category.objects.get_or_create(name=cat_name)
+        for option in action_options:
+            action, created = ActionTakenOption.objects.get_or_create(
+                name=option['name'],
+                defaults={'description': option['description'], 'is_active': True}
+            )
             if created:
-                self.stdout.write(
-                    self.style.SUCCESS(f'Created category: {category.name}')
-                )
+                self.stdout.write(self.style.SUCCESS(f'Created action: {option["name"]}'))
             else:
-                self.stdout.write(
-                    self.style.WARNING(f'Category already exists: {category.name}')
-                )
+                self.stdout.write(f'Action already exists: {option["name"]}')
         
-        self.stdout.write(
-            self.style.SUCCESS('Successfully initialized default data!')
-        )
+        self.stdout.write(self.style.SUCCESS('Default data initialization complete!'))

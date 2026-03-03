@@ -15,6 +15,7 @@ Available Endpoints:
     - /api/activity-logs/ - Activity logs (read-only)
     - /api/maintenance-logs/ - Maintenance log management
     - /api/action-taken-options/ - Action taken options
+    - /api/technicians/ - Technician management
     - /api/users/ - User management (read-only)
     - /api/user-profiles/ - User profile management
     - /api/dashboard/ - Dashboard statistics
@@ -42,6 +43,9 @@ router.register(r"user-profiles", views.UserProfileViewSet, basename="user-profi
 # Maintenance endpoints
 router.register(r"maintenance-logs", views.MaintenanceLogViewSet, basename="maintenance-log")
 router.register(r"action-taken-options", views.ActionTakenOptionViewSet, basename="action-taken-option")
+
+# Technicians endpoints
+router.register(r"technicians", views.TechnicianViewSet, basename="technician")
 
 # API URL patterns
 urlpatterns = [

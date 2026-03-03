@@ -1,0 +1,232 @@
+{% extends 'base.html' %}
+
+{% block page_title %}{{ technician.company_name }} - {{ technician.technician_name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Technician Info Card -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-wrench-adjustable-circle"></i> Technician Details</span>
+                <a href="{% url 'technicians:list' %}" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center mx-auto mb-3" 
+                         style="width: 80px; height: 80px; font-size: 2rem;">
+                        <i class="bi bi-wrench-adjustable"></i>
+                    </div>
+                    <h5 class="mb-1">{{ technician.company_name }}</h5>
+                    <p class="text-muted mb-2">{{ technician.technician_name }}</p>
+                    {% if technician.is_active %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <div class="mb-3">
+                    <label class="text-muted small">Specialization</label>
+                    <p class="mb-0">{{ technician.specialization|default:"Not specified" }}</p>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="text-muted small">Phone</label>
+                    <p class="mb-0">
+                        {% if technician.phone_number %}
+                        <a href="tel:{{ technician.phone_number }}">{{ technician.phone_number }}</a>
+                        {% else %}
+                        Not provided
+                        {% endif %}
+                    </p>
+                </div>
+                
+                {% if technician.alternate_phone %}
+                <div class="mb-3">
+                    <label class="text-muted small">Alternate Phone</label>
+                    <p class="mb-0">
+                        <a href="tel:{{ technician.alternate_phone }}">{{ technician.alternate_phone }}</a>
+                    </p>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <label class="text-muted small">Email</label>
+                    <p class="mb-0">
+                        {% if technician.email %}
+                        <a href="mailto:{{ technician.email }}">{{ technician.email }}</a>
+                        {% else %}
+                        Not provided
+                        {% endif %}
+                    </p>
+                </div>
+                
+                {% if technician.address %}
+                <div class="mb-3">
+                    <label class="text-muted small">Address</label>
+                    <p class="mb-0">{{ technician.address }}</p>
+                </div>
+                {% endif %}
+                
+                <div class="d-grid gap-2 mt-4">
+                    <a href="{% url 'technicians:update' technician.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-1"></i> Edit Technician
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats -->
+        <div class="row g-3">
+            <div class="col-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="mb-0">{{ assistants.count }}</h3>
+                        <small class="text-muted">Assistants</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h3 class="mb-0">{{ services.count }}</h3>
+                        <small class="text-muted">Services</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column -->
+    <div class="col-md-8">
+        <!-- Assistants -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people"></i> Assistants</span>
+                <a href="{% url 'technicians:add_assistant' technician.pk %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i> Add Assistant
+                </a>
+            </div>
+            <div class="card-body">
+                {% if assistants %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Phone</th>
+                                <th>Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assistant in assistants %}
+                            <tr>
+                                <td>{{ assistant.name }}</td>
+                                <td>{{ assistant.role|default:"-" }}</td>
+                                <td>{{ assistant.phone_number|default:"-" }}</td>
+                                <td>{{ assistant.email|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-people text-muted display-4"></i>
+                    <p class="text-muted mt-2">No assistants added yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Services -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-tools"></i> Services</span>
+                <a href="{% url 'technicians:add_service' technician.pk %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i> Add Service
+                </a>
+            </div>
+            <div class="card-body">
+                {% if services %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th>Typical Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for service in services %}
+                            <tr>
+                                <td>
+                                    <strong>{{ service.service_name }}</strong>
+                                    {% if service.description %}
+                                    <br><small class="text-muted">{{ service.description }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if service.typical_cost %}
+                                    KES {{ service.typical_cost|floatformat:2 }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-tools text-muted display-4"></i>
+                    <p class="text-muted mt-2">No services added yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Recent Recommendations -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clipboard-check"></i> Recent Recommendations</span>
+                <a href="{% url 'technicians:add_recommendation' %}?technician={{ technician.pk }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i> Add Recommendation
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recommendations %}
+                <div class="list-group">
+                    {% for rec in recommendations %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ rec.get_recommendation_type_display }} for {{ rec.asset.asset_id }}</h6>
+                                <p class="mb-1">{{ rec.description|truncatewords:20 }}</p>
+                                <small class="text-muted">{{ rec.created_at|date:"M d, Y" }}</small>
+                            </div>
+                            <span class="badge bg-{% if rec.priority == 'URGENT' %}danger{% elif rec.priority == 'HIGH' %}warning{% elif rec.priority == 'MEDIUM' %}info{% else %}secondary{% endif %}">
+                                {{ rec.get_priority_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-clipboard text-muted display-4"></i>
+                    <p class="text-muted mt-2">No recommendations yet</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

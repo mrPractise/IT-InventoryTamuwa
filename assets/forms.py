@@ -1,4 +1,5 @@
 from django import forms
+from django.utils import timezone
 from .models import Asset, Category, StatusOption, Department, Person
 
 
@@ -44,3 +45,17 @@ class AssetForm(forms.ModelForm):
         self.fields['purchase_cost'].required = False
         self.fields['requisition'].required = False
         self.fields['asset_id'].required = False
+
+    def clean_purchase_date(self):
+        """Validate purchase date is within reasonable range"""
+        purchase_date = self.cleaned_data.get('purchase_date')
+        if purchase_date:
+            current_year = timezone.now().year
+            min_year = 1900
+            max_year = current_year + 1  # Allow for next year purchases
+            
+            if purchase_date.year < min_year:
+                raise forms.ValidationError(f"Purchase date year must be {min_year} or later.")
+            if purchase_date.year > max_year:
+                raise forms.ValidationError(f"Purchase date year cannot be later than {max_year}.")
+        return purchase_date

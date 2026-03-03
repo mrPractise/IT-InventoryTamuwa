@@ -1,7 +1,7 @@
-from django.db.models.signals import pre_save, post_save
+from django.db.models.signals import pre_save, post_save, pre_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User
-from .models import Asset, AssignmentHistory, ActivityLog, StatusOption
+from .models import Asset, AssignmentHistory, ActivityLog, StatusOption, Person
 from django.utils import timezone
 
 
@@ -155,3 +155,19 @@ def log_activity(sender, instance, created, **kwargs):
         old_value=old_value,
         new_value=new_value,
     )
+
+
+@receiver(pre_delete, sender=Person)
+def handle_person_deletion(sender, instance, **kwargs):
+    """Ensure data consistency when a person is deleted"""
+    # Unassign all assets assigned to this person
+    Asset.objects.filter(assigned_to=instance).update(assigned_to=None)
+    
+    # Close any open assignment histories for this person
+    AssignmentHistory.objects.filter(
+        person=instance,
+        end_date__isnull=True
+    ).update(end_date=timezone.now())
+    
+    # Note: We don't delete the assignment history - it remains for audit purposes
+    # The person field will be set to NULL due to on_delete=SET_NULL

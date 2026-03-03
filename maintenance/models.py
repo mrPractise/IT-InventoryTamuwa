@@ -70,12 +70,13 @@ class MaintenanceLog(models.Model):
         related_name='maintenance_logs',
         verbose_name="Requisition No."
     )
+    # New field linking to Technician model
     performed_by = models.ForeignKey(
-        Person,
+        'technicians.Technician',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='performed_maintenance',
+        related_name='maintenance_logs',
         verbose_name="Performed By"
     )
     created_at = models.DateTimeField(auto_now_add=True)

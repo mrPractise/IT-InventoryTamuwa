@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}AssetCore - Inventory Management{% endblock %}</title>
+    <title>{% block title %}ICTcore - Inventory Management{% endblock %}</title>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -89,6 +89,33 @@
             color: #ffffff;
             font-weight: 600;
             border-left: 3px solid #adb5bd;
+        }
+
+        /* Logout button styling to match sidebar links */
+        .sidebar-logout-btn {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #c8c8c8;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin: 2px 8px;
+            width: calc(100% - 16px) !important;
+        }
+
+        .sidebar-logout-btn:hover {
+            background: #4e4e4e;
+            color: #ffffff;
+        }
+
+        .sidebar-logout-btn i {
+            margin-right: 10px;
+            width: 18px;
+            font-size: 1rem;
         }
 
         .sidebar-menu i {
@@ -201,7 +228,7 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <div class="sidebar-brand">
-            <i class="bi bi-box-seam"></i> AssetCore
+            <i class="bi bi-box-seam"></i> ICTcore
         </div>
         <ul class="sidebar-menu">
             <li>
@@ -212,8 +239,32 @@
             </li>
             <li>
                 <a href="{% url 'assets:list' %}"
-                    class="{% if request.resolver_match.app_name == 'assets' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'assets' and request.resolver_match.url_name != 'create' %}active{% endif %}">
                     <i class="bi bi-box"></i> Assets
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'requisition:list' %}"
+                    class="{% if request.resolver_match.url_name == 'list' or request.resolver_match.url_name == 'detail' or request.resolver_match.url_name == 'create' %}active{% endif %}">
+                    <i class="bi bi-receipt"></i> Requisitions
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'requisition:unapproved_items' %}"
+                    class="{% if request.resolver_match.url_name == 'unapproved_items' %}active{% endif %}">
+                    <i class="bi bi-x-circle"></i> Not Approved Items
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'requisition:bought_items_queue' %}"
+                    class="{% if request.resolver_match.url_name == 'bought_items_queue' %}active{% endif %}">
+                    <i class="bi bi-cart-check"></i> Bought Items Queue
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'technicians:list' %}"
+                    class="{% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'technicians' %}active{% endif %}">
+                    <i class="bi bi-wrench-adjustable-circle"></i> Technicians
                 </a>
             </li>
             <li>
@@ -235,18 +286,6 @@
                 </a>
             </li>
             <li>
-                <a href="{% url 'requisition:list' %}"
-                    class="{% if request.resolver_match.app_name == 'requisition' and request.resolver_match.url_name != 'unapproved_items' %}active{% endif %}">
-                    <i class="bi bi-receipt"></i> Requisitions
-                </a>
-            </li>
-            <li>
-                <a href="{% url 'requisition:unapproved_items' %}"
-                    class="{% if request.resolver_match.url_name == 'unapproved_items' %}active{% endif %}">
-                    <i class="bi bi-x-circle"></i> Not Approved Items
-                </a>
-            </li>
-            <li>
                 <a href="{% url 'users:directory' %}"
                     class="{% if request.resolver_match.url_name == 'directory' or request.resolver_match.url_name == 'user_assets' or request.resolver_match.url_name == 'department_assets' %}active{% endif %}">
                     <i class="bi bi-people-fill"></i> People &amp; Depts
@@ -259,15 +298,24 @@
             </li>
             {% if user.is_superuser or user.profile.role == 'super_admin' or user.profile.role == 'admin' %}
             <li>
+                <a href="{% url 'users:user_list' %}"
+                    class="{% if request.resolver_match.url_name == 'user_list' or request.resolver_match.url_name == 'user_create' or request.resolver_match.url_name == 'user_edit' %}active{% endif %}">
+                    <i class="bi bi-people"></i> User Management
+                </a>
+            </li>
+            <li>
                 <a href="/admin/" target="_blank">
                     <i class="bi bi-gear"></i> Admin Panel
                 </a>
             </li>
             {% endif %}
             <li>
-                <a href="{% url 'users:logout' %}">
-                    <i class="bi bi-box-arrow-right"></i> Logout
-                </a>
+                <form method="post" action="{% url 'users:logout' %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link text-decoration-none w-100 text-start sidebar-logout-btn">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                </form>
             </li>
         </ul>
     </div>
@@ -349,6 +397,255 @@
                 }, 5000);
             });
         });
+
+        // ============================================
+        // FORM DATA PERSISTENCE - localStorage
+        // ============================================
+        
+        /**
+         * FormPersistence - Automatically saves and restores form data
+         * Uses localStorage to persist data across page refreshes and navigation
+         */
+        const FormPersistence = {
+            // Prefix for localStorage keys
+            prefix: 'ictcore_form_',
+            
+            // Forms to auto-save (CSS selectors)
+            formSelectors: [
+                'form[method="post"]:not([data-no-persist])'
+            ],
+            
+            // Fields to exclude from persistence
+            excludedFields: [
+                'csrfmiddlewaretoken',
+                'password',
+                'confirm_password',
+                'current_password',
+                'new_password'
+            ],
+            
+            // Initialize form persistence
+            init: function() {
+                this.bindForms();
+                this.setupAutoSave();
+                this.setupRestore();
+                this.setupClearOnSubmit();
+            },
+            
+            // Get storage key for a form
+            getStorageKey: function(form) {
+                const formId = form.id || form.getAttribute('name') || 'default';
+                const pagePath = window.location.pathname;
+                return this.prefix + pagePath + '_' + formId;
+            },
+            
+            // Get all form data as object
+            getFormData: function(form) {
+                const data = {};
+                const fields = form.querySelectorAll('input, select, textarea');
+                
+                fields.forEach(field => {
+                    const name = field.name;
+                    if (!name || this.excludedFields.includes(name)) return;
+                    
+                    // Handle different field types
+                    if (field.type === 'checkbox') {
+                        data[name] = field.checked;
+                    } else if (field.type === 'radio') {
+                        if (field.checked) {
+                            data[name] = field.value;
+                        }
+                    } else if (field.type === 'file') {
+                        // Don't persist file inputs
+                    } else {
+                        data[name] = field.value;
+                    }
+                });
+                
+                return data;
+            },
+            
+            // Save form data to localStorage
+            saveForm: function(form) {
+                const key = this.getStorageKey(form);
+                const data = this.getFormData(form);
+                const timestamp = new Date().toISOString();
+                
+                try {
+                    localStorage.setItem(key, JSON.stringify({
+                        data: data,
+                        timestamp: timestamp,
+                        url: window.location.href
+                    }));
+                } catch (e) {
+                    console.warn('Could not save form data:', e);
+                }
+            },
+            
+            // Restore form data from localStorage
+            restoreForm: function(form) {
+                const key = this.getStorageKey(form);
+                const saved = localStorage.getItem(key);
+                
+                if (!saved) return;
+                
+                try {
+                    const parsed = JSON.parse(saved);
+                    const data = parsed.data;
+                    
+                    // Check if data is not too old (7 days)
+                    const savedDate = new Date(parsed.timestamp);
+                    const now = new Date();
+                    const daysDiff = (now - savedDate) / (1000 * 60 * 60 * 24);
+                    
+                    if (daysDiff > 7) {
+                        localStorage.removeItem(key);
+                        return;
+                    }
+                    
+                    // Restore field values
+                    Object.keys(data).forEach(name => {
+                        const fields = form.querySelectorAll(`[name="${name}"]`);
+                        
+                        fields.forEach(field => {
+                            if (field.type === 'checkbox') {
+                                field.checked = data[name];
+                            } else if (field.type === 'radio') {
+                                field.checked = (field.value === data[name]);
+                            } else {
+                                field.value = data[name];
+                                // Trigger change event for any listeners
+                                field.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        });
+                    });
+                    
+                    // Show restore notification
+                    this.showRestoreNotification(form, key);
+                    
+                } catch (e) {
+                    console.warn('Could not restore form data:', e);
+                }
+            },
+            
+            // Show notification that form was restored
+            showRestoreNotification: function(form, storageKey) {
+                // Check if notification already shown
+                if (form.dataset.restored === 'true') return;
+                form.dataset.restored = 'true';
+                
+                const notification = document.createElement('div');
+                notification.className = 'alert alert-info alert-dismissible fade show mb-3';
+                notification.innerHTML = `
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    Form data restored from your previous session.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                form.insertBefore(notification, form.firstChild);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(() => {
+                    const bsAlert = bootstrap.Alert.getOrCreateInstance(notification);
+                    if (bsAlert) bsAlert.close();
+                }, 5000);
+            },
+            
+            // Clear saved form data
+            clearForm: function(form) {
+                const key = this.getStorageKey(form);
+                localStorage.removeItem(key);
+            },
+            
+            // Bind to all forms
+            bindForms: function() {
+                const forms = document.querySelectorAll(this.formSelectors.join(', '));
+                forms.forEach(form => {
+                    // Mark form as persistent
+                    form.dataset.persistent = 'true';
+                });
+            },
+            
+            // Setup auto-save on input changes
+            setupAutoSave: function() {
+                const self = this;
+                let saveTimeout;
+                
+                document.addEventListener('input', function(e) {
+                    const field = e.target;
+                    const form = field.closest('form[data-persistent]');
+                    
+                    if (!form) return;
+                    
+                    // Debounce save (wait 500ms after last input)
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => {
+                        self.saveForm(form);
+                    }, 500);
+                });
+                
+                // Also save on change events (selects, checkboxes, radios)
+                document.addEventListener('change', function(e) {
+                    const field = e.target;
+                    const form = field.closest('form[data-persistent]');
+                    
+                    if (!form) return;
+                    
+                    self.saveForm(form);
+                });
+            },
+            
+            // Setup restore on page load
+            setupRestore: function() {
+                const self = this;
+                
+                document.addEventListener('DOMContentLoaded', function() {
+                    const forms = document.querySelectorAll('form[data-persistent]');
+                    forms.forEach(form => {
+                        self.restoreForm(form);
+                    });
+                });
+            },
+            
+            // Clear saved data on successful form submission
+            setupClearOnSubmit: function() {
+                const self = this;
+                
+                document.addEventListener('submit', function(e) {
+                    const form = e.target;
+                    if (form.dataset.persistent) {
+                        self.clearForm(form);
+                    }
+                });
+            },
+            
+            // Manual save (can be called from custom scripts)
+            manualSave: function(formId) {
+                const form = document.getElementById(formId) || document.querySelector(formId);
+                if (form) {
+                    this.saveForm(form);
+                }
+            },
+            
+            // Manual restore (can be called from custom scripts)
+            manualRestore: function(formId) {
+                const form = document.getElementById(formId) || document.querySelector(formId);
+                if (form) {
+                    this.restoreForm(form);
+                }
+            },
+            
+            // Manual clear (can be called from custom scripts)
+            manualClear: function(formId) {
+                const form = document.getElementById(formId) || document.querySelector(formId);
+                if (form) {
+                    this.clearForm(form);
+                }
+            }
+        };
+        
+        // Initialize form persistence
+        FormPersistence.init();
     </script>
 
     {% block extra_js %}{% endblock %}

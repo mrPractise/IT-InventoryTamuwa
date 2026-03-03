@@ -14,6 +14,10 @@ def maintenance_list(request):
     logs = MaintenanceLog.objects.select_related(
         'asset', 'action_taken', 'reported_by', 'performed_by', 'requisition'
     ).order_by('-timestamp')
+    
+    # Get all active technicians for the filter dropdown
+    from technicians.models import Technician
+    technicians = Technician.objects.filter(is_active=True).order_by('company_name', 'technician_name')
 
     # Filters
     status_filter = request.GET.get('status')
@@ -42,7 +46,7 @@ def maintenance_list(request):
         'status_filter': status_filter,
         'search_query': search_query,
         'performed_by_filter': performed_by_filter,
-        'all_persons': Person.objects.all().order_by('first_name', 'last_name'),
+        'all_technicians': technicians,
     }
 
     return render(request, 'maintenance/list.html', context)

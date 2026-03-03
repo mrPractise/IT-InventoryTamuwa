@@ -43,6 +43,10 @@ from users.serializers import UserSerializer, UserProfileSerializer
 from maintenance.models import MaintenanceLog, ActionTakenOption
 from maintenance.serializers import MaintenanceLogSerializer, ActionTakenOptionSerializer
 
+# Technicians API
+from technicians.models import Technician
+from technicians.serializers import TechnicianSerializer
+
 
 # ============================================================================
 # PERMISSION CLASSES
@@ -257,11 +261,27 @@ class MaintenanceLogViewSet(viewsets.ModelViewSet):
     destroy: Delete a maintenance log
     """
     queryset = (
-        MaintenanceLog.objects.select_related("asset", "action_taken")
+        MaintenanceLog.objects.select_related("asset", "action_taken", "performed_by")
         .all()
         .order_by("-timestamp")
     )
     serializer_class = MaintenanceLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class TechnicianViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing technicians.
+    
+    list: Get all technicians
+    create: Create a new technician
+    retrieve: Get a specific technician
+    update: Update a technician
+    partial_update: Partially update a technician
+    destroy: Delete a technician
+    """
+    queryset = Technician.objects.filter(is_active=True).order_by("company_name", "technician_name")
+    serializer_class = TechnicianSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 

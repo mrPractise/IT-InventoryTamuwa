@@ -18,6 +18,10 @@ class UserProfile(models.Model):
     phone_number = models.CharField(max_length=20, blank=True)
     employee_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
     profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    # Password change tracking
+    password_changed_at = models.DateTimeField(null=True, blank=True)
+    must_change_password = models.BooleanField(default=False, verbose_name="Must Change Password on Login")
+    is_first_login = models.BooleanField(default=True, verbose_name="First Login")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -41,3 +45,7 @@ class UserProfile(models.Model):
 
     def can_view_maintenance(self):
         return self.role in ['super_admin', 'admin', 'technician']
+    
+    def needs_password_change(self):
+        """Check if user needs to change password"""
+        return self.must_change_password or self.is_first_login

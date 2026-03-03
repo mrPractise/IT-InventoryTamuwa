@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'requisition.apps.RequisitionConfig',
     'issues.apps.IssuesConfig',
     'users',
+    'technicians.apps.TechniciansConfig',
     # API app - centralized API endpoints
     'api.apps.ApiConfig',
 ]
@@ -95,6 +96,11 @@ if config('DB_HOST', default=''):
             'PASSWORD': config('DB_PASSWORD', default='postgres'),
             'HOST': config('DB_HOST', default='db'),
             'PORT': config('DB_PORT', default='5432'),
+            # Ensure data consistency with proper transaction handling
+            'OPTIONS': {
+                'connect_timeout': 10,
+            },
+            'ATOMIC_REQUESTS': True,  # Wrap each request in a transaction
         }
     }
 else:
@@ -102,6 +108,7 @@ else:
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+            'ATOMIC_REQUESTS': True,  # Wrap each request in a transaction
         }
     }
 
