@@ -3,9 +3,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import Issue, IssueComment, Project, ProjectComment
+from django.http import JsonResponse
+from .models import Issue, IssueComment, Project, ProjectComment, ProjectItem
 from .forms import IssueForm, ProjectForm, CommentForm
 from users.decorators import role_required
+from assets.models import Category, Asset
 
 
 def _is_admin(user):
@@ -19,7 +21,7 @@ def issue_list(request):
     priority = request.GET.get('i_priority', '')
     status = request.GET.get('i_status', '')
 
-    issues_qs = Issue.objects.select_related('asset', 'department', 'requisition', 'reported_by')
+    issues_qs = Issue.objects.select_related('asset', 'department', 'reported_by')
     if search:
         issues_qs = issues_qs.filter(
             Q(title__icontains=search) | Q(description__icontains=search)
@@ -161,6 +163,8 @@ def project_detail(request, pk):
     project = get_object_or_404(Project, pk=pk)
     comments = project.comments.select_related('author')
     comment_form = CommentForm()
+    cost_items = project.cost_items.all()
+    total_cost = sum(item.total_price for item in cost_items)
 
     if request.method == 'POST':
         if not _is_admin(request.user):
@@ -174,12 +178,70 @@ def project_detail(request, pk):
             messages.success(request, 'Comment added.')
             return redirect('issues:project_detail', pk=pk)
 
+    # Build category availability data
+    category_counts = []
+    for cat in project.categories.all():
+        assets = Asset.objects.filter(category=cat, is_deleted=False).order_by('status__name', 'asset_id')
+        available_count = assets.filter(status__name='Available').count()
+        category_counts.append({
+            'category': cat,
+            'available_count': available_count,
+            'assets': assets,
+        })
+
     return render(request, 'issues/project_detail.html', {
         'project': project,
         'comments': comments,
         'comment_form': comment_form,
-        'category_counts': project.category_asset_counts(),
+        'category_counts': category_counts,
+        'cost_items': cost_items,
+        'total_cost': total_cost,
     })
+
+
+@login_required
+def category_assets_api(request, category_id):
+    """Return assets in a category as JSON for the project form"""
+    cat = get_object_or_404(Category, pk=category_id)
+    assets = Asset.objects.filter(
+        category=cat, is_deleted=False
+    ).order_by('status__name', 'asset_id').select_related('status', 'assigned_to', 'department')
+    data = [{
+        'id': a.pk,
+        'asset_id': a.asset_id,
+        'name': a.name or a.asset_id,
+        'status': a.status.name if a.status else 'Unknown',
+        'assigned_to': str(a.assigned_to) if a.assigned_to else None,
+        'department': str(a.department) if a.department else None,
+    } for a in assets]
+    return JsonResponse({'category': cat.name, 'assets': data})
+
+
+def _save_project_items(project, post_data):
+    """Save/replace project cost items from POST data."""
+    item_names = post_data.getlist('item_name[]')
+    item_types = post_data.getlist('item_type[]')
+    unit_prices = post_data.getlist('unit_price[]')
+    quantities = post_data.getlist('quantity[]')
+
+    project.cost_items.all().delete()
+    for i in range(len(item_names)):
+        name = item_names[i].strip()
+        if not name:
+            continue
+        try:
+            price = float(unit_prices[i] or 0)
+            qty = int(quantities[i] or 1)
+        except (ValueError, IndexError):
+            price, qty = 0, 1
+        itype = item_types[i] if i < len(item_types) else 'Asset'
+        ProjectItem.objects.create(
+            project=project,
+            item_name=name,
+            item_type=itype,
+            unit_price=price,
+            quantity=qty,
+        )
 
 
 @login_required
@@ -192,10 +254,10 @@ def project_create(request):
             project.reported_by = request.user
             project.save()
             form.save_m2m()
+            _save_project_items(project, request.POST)
             messages.success(request, f'Project "{project.title}" created.')
             return redirect('issues:project_detail', pk=project.pk)
         else:
-            # Display form validation errors
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{form.fields[field].label or field}: {error}")
@@ -216,15 +278,16 @@ def project_update(request, pk):
         form = ProjectForm(request.POST, instance=project)
         if form.is_valid():
             form.save()
+            _save_project_items(project, request.POST)
             messages.success(request, f'Project "{project.title}" updated.')
             return redirect('issues:project_detail', pk=project.pk)
         else:
-            # Display form validation errors
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{form.fields[field].label or field}: {error}")
     else:
         form = ProjectForm(instance=project)
     return render(request, 'issues/project_form.html', {
-        'form': form, 'project': project, 'title': f'Edit: {project.title}'
+        'form': form, 'project': project, 'title': f'Edit: {project.title}',
+        'cost_items': project.cost_items.all(),
     })

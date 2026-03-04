@@ -26,6 +26,22 @@ class Requisition(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # One-way links to Issues and Projects (requisition tags the issue/project, not the other way)
+    linked_issue = models.ForeignKey(
+        'issues.Issue',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='requisitions',
+        verbose_name='Linked Issue'
+    )
+    linked_project = models.ForeignKey(
+        'issues.Project',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='requisitions',
+        verbose_name='Linked Project'
+    )
+
     class Meta:
         ordering = ['-created_at']
         unique_together = ['req_no', 'company']  # Same req_no allowed for different companies

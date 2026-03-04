@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+{% block title %}Notifications | ICTcore{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notif-card {
+        border-left: 4px solid transparent;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        padding: 16px 20px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        transition: transform .15s;
+    }
+    .notif-card:hover { transform: translateX(3px); }
+    .notif-card.danger  { border-left-color: #dc3545; }
+    .notif-card.warning { border-left-color: #ffc107; }
+    .notif-card.info    { border-left-color: #0dcaf0; }
+
+    .notif-icon {
+        font-size: 1.6rem;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+    .notif-card.danger  .notif-icon { color: #dc3545; }
+    .notif-card.warning .notif-icon { color: #ffc107; }
+    .notif-card.info    .notif-icon { color: #0dcaf0; }
+
+    .notif-title { font-weight: 600; font-size: .95rem; margin-bottom: 3px; }
+    .notif-msg   { font-size: .85rem; color: #6c757d; }
+    .notif-meta  { font-size: .78rem; color: #adb5bd; margin-top: 4px; }
+
+    .badge-pill { border-radius: 999px; padding: 4px 10px; font-size: .78rem; }
+
+    .filter-btn.active { font-weight: 700; }
+
+    .empty-state { text-align: center; padding: 64px 0; color: #6c757d; }
+    .empty-state i { font-size: 4rem; display: block; margin-bottom: 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="mb-1 fw-bold">System Notifications</h5>
+        <small class="text-muted">Live alerts from Issues, Maintenance, Requisitions, Assets &amp; Projects</small>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        {% if counts.total %}
+        <span class="badge bg-secondary badge-pill">{{ counts.total }} total</span>
+        {% endif %}
+        {% if counts.danger %}
+        <span class="badge bg-danger badge-pill"><i class="bi bi-exclamation-circle me-1"></i>{{ counts.danger }} critical</span>
+        {% endif %}
+        {% if counts.warning %}
+        <span class="badge bg-warning text-dark badge-pill"><i class="bi bi-exclamation-triangle me-1"></i>{{ counts.warning }} warning</span>
+        {% endif %}
+        {% if counts.info %}
+        <span class="badge bg-info text-dark badge-pill"><i class="bi bi-info-circle me-1"></i>{{ counts.info }} info</span>
+        {% endif %}
+    </div>
+</div>
+
+{% if notifications %}
+
+<!-- Category filter buttons -->
+<div class="mb-4 d-flex flex-wrap gap-2" id="filterBtns">
+    <button class="btn btn-sm btn-outline-secondary filter-btn active" data-filter="all">All</button>
+    <button class="btn btn-sm btn-outline-danger filter-btn"   data-filter="danger">Critical</button>
+    <button class="btn btn-sm btn-outline-warning filter-btn"  data-filter="warning">Warnings</button>
+    <button class="btn btn-sm btn-outline-info filter-btn"     data-filter="info">Info</button>
+    <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="cat-Issues">Issues</button>
+    <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="cat-Maintenance">Maintenance</button>
+    <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="cat-Requisitions">Requisitions</button>
+    <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="cat-Assets">Assets</button>
+    <button class="btn btn-sm btn-outline-secondary filter-btn" data-filter="cat-Projects">Projects</button>
+</div>
+
+<!-- Notification list -->
+<div id="notifList">
+{% for notif in notifications %}
+<div class="notif-card {{ notif.level }}" data-level="{{ notif.level }}" data-category="{{ notif.category }}">
+    <i class="bi {{ notif.icon }} notif-icon"></i>
+    <div class="flex-grow-1">
+        <div class="notif-title">{{ notif.title }}</div>
+        <div class="notif-msg">{{ notif.message }}</div>
+        <div class="notif-meta d-flex align-items-center gap-3 mt-1">
+            <span class="badge
+                {% if notif.level == 'danger' %}bg-danger
+                {% elif notif.level == 'warning' %}bg-warning text-dark
+                {% else %}bg-info text-dark{% endif %}
+                badge-pill">{{ notif.category }}</span>
+            {% if notif.timestamp %}
+            <span><i class="bi bi-clock me-1"></i>{{ notif.timestamp|date:"d M Y H:i" }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="flex-shrink-0">
+        <a href="{{ notif.link }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-right me-1"></i>{{ notif.link_label }}
+        </a>
+    </div>
+</div>
+{% endfor %}
+</div>
+
+<!-- No results after filter -->
+<div id="noResults" class="empty-state d-none">
+    <i class="bi bi-funnel text-muted"></i>
+    <p>No notifications match this filter.</p>
+</div>
+
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-check-circle text-success"></i>
+    <h5 class="fw-semibold">All clear!</h5>
+    <p>No important notifications right now. Everything looks good.</p>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.notif-card');
+    const noResults = document.getElementById('noResults');
+
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', function () {
+            filterBtns.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+
+            const filter = this.dataset.filter;
+            let visible = 0;
+
+            cards.forEach(card => {
+                let show = false;
+                if (filter === 'all') {
+                    show = true;
+                } else if (filter.startsWith('cat-')) {
+                    show = card.dataset.category === filter.slice(4);
+                } else {
+                    show = card.dataset.level === filter;
+                }
+                card.style.display = show ? 'flex' : 'none';
+                if (show) visible++;
+            });
+
+            noResults.classList.toggle('d-none', visible > 0);
+        });
+    });
+});
+</script>
+{% endblock %}

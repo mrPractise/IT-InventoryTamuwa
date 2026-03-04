@@ -93,3 +93,144 @@ def dashboard_home(request):
     }
     
     return render(request, 'dashboard/home.html', context)
+
+
+@login_required
+def notifications_view(request):
+    """Notifications hub — aggregates important system alerts from all apps."""
+    from issues.models import Issue, Project
+    from assets.models import Asset, ActivityLog
+    import json
+
+    now = timezone.now()
+    today = now.date()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+
+    notifications = []
+
+    # ── 1. Critical / High Issues that are still Open or Monitoring ──
+    critical_issues = Issue.objects.filter(
+        priority__in=['Critical', 'High'],
+        status__in=['Open', 'Monitoring']
+    ).order_by('-created_at')
+    for issue in critical_issues:
+        age_days = (today - issue.created_at.date()).days
+        level = 'danger' if issue.priority == 'Critical' else 'warning'
+        notifications.append({
+            'level': level,
+            'icon': 'bi-bug-fill',
+            'title': f"{issue.priority} Issue: {issue.title}",
+            'message': f"Status: {issue.status} · Open for {age_days} day{'s' if age_days != 1 else ''}",
+            'link': f"/issues/issues/{issue.pk}/",
+            'link_label': 'View Issue',
+            'category': 'Issues',
+            'timestamp': issue.created_at,
+        })
+
+    # ── 2. Requisitions that have been Pending for > 7 days ──
+    stale_reqs = Requisition.objects.filter(
+        status='Pending',
+        created_at__date__lte=week_ago
+    ).order_by('created_at')
+    for req in stale_reqs:
+        age_days = (today - req.created_at.date()).days
+        notifications.append({
+            'level': 'warning',
+            'icon': 'bi-receipt',
+            'title': f"Stale Requisition: {req.req_no} — {req.title}",
+            'message': f"Pending for {age_days} days · Company: {req.company}",
+            'link': f"/requisition/{req.pk}/",
+            'link_label': 'View Requisition',
+            'category': 'Requisitions',
+            'timestamp': req.created_at,
+        })
+
+    # ── 3. Approved Requisitions with unprocessed items ──
+    bought_reqs_with_unprocessed = Requisition.objects.filter(
+        status='Bought'
+    ).prefetch_related('items')
+    for req in bought_reqs_with_unprocessed:
+        unprocessed = [i for i in req.items.all() if i.is_approved and not i.is_processed]
+        if unprocessed:
+            notifications.append({
+                'level': 'info',
+                'icon': 'bi-cart-check',
+                'title': f"Bought Req has unprocessed items: {req.req_no}",
+                'message': f"{len(unprocessed)} item(s) not yet added to assets · {req.title}",
+                'link': f"/requisition/{req.pk}/",
+                'link_label': 'View Requisition',
+                'category': 'Requisitions',
+                'timestamp': req.updated_at,
+            })
+
+    # ── 4. Assets under maintenance for > 14 days (open logs) ──
+    long_maintenance = MaintenanceLog.objects.filter(
+        maintenance_status='Open',
+        date_reported__lte=today - timedelta(days=14)
+    ).select_related('asset').order_by('date_reported')
+    for log in long_maintenance:
+        age_days = (today - log.date_reported).days
+        notifications.append({
+            'level': 'warning',
+            'icon': 'bi-tools',
+            'title': f"Long maintenance: {log.asset.asset_id} — {log.asset.name}",
+            'message': f"Under maintenance for {age_days} days · Reported: {log.date_reported.strftime('%d %b %Y')}",
+            'link': f"/maintenance/{log.pk}/",
+            'link_label': 'View Log',
+            'category': 'Maintenance',
+            'timestamp': log.timestamp,
+        })
+
+    # ── 5. Missing assets ──
+    missing_assets = Asset.objects.filter(
+        is_deleted=False,
+        status__name='Missing'
+    ).select_related('status', 'category').order_by('-updated_at')
+    for asset in missing_assets:
+        notifications.append({
+            'level': 'danger',
+            'icon': 'bi-question-circle-fill',
+            'title': f"Missing Asset: {asset.asset_id} — {asset.name}",
+            'message': f"Category: {asset.category.name if asset.category else 'N/A'}",
+            'link': f"/assets/{asset.pk}/",
+            'link_label': 'View Asset',
+            'category': 'Assets',
+            'timestamp': asset.updated_at,
+        })
+
+    # ── 6. Projects pending for > 30 days ──
+    stale_projects = Project.objects.filter(
+        status='Pending',
+        created_at__date__lte=month_ago
+    ).order_by('created_at')
+    for proj in stale_projects:
+        age_days = (today - proj.created_at.date()).days
+        notifications.append({
+            'level': 'info',
+            'icon': 'bi-kanban',
+            'title': f"Stale Project: {proj.title}",
+            'message': f"Pending for {age_days} days · Priority: {proj.priority}",
+            'link': f"/issues/projects/{proj.pk}/",
+            'link_label': 'View Project',
+            'category': 'Projects',
+            'timestamp': proj.created_at,
+        })
+
+    # Sort by level severity first (danger > warning > info), then by timestamp desc
+    level_order = {'danger': 0, 'warning': 1, 'info': 2}
+    notifications.sort(key=lambda n: (level_order.get(n['level'], 3), -(n['timestamp'].timestamp() if n['timestamp'] else 0)))
+
+    # Counts per category
+    counts = {
+        'total': len(notifications),
+        'danger': sum(1 for n in notifications if n['level'] == 'danger'),
+        'warning': sum(1 for n in notifications if n['level'] == 'warning'),
+        'info': sum(1 for n in notifications if n['level'] == 'info'),
+    }
+
+    context = {
+        'notifications': notifications,
+        'counts': counts,
+    }
+    return render(request, 'dashboard/notifications.html', context)

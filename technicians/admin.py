@@ -22,6 +22,6 @@ class TechnicianAdmin(admin.ModelAdmin):
 
 @admin.register(TechnicianRecommendation)
 class TechnicianRecommendationAdmin(admin.ModelAdmin):
-    list_display = ['technician', 'asset', 'recommendation_type', 'priority', 'is_completed', 'created_at']
+    list_display = ['technician', 'category_name', 'recommendation_type', 'priority', 'is_completed', 'created_at']
     list_filter = ['recommendation_type', 'priority', 'is_completed']
-    search_fields = ['technician__technician_name', 'asset__asset_id', 'description']
+    search_fields = ['technician__technician_name', 'category_name', 'description']

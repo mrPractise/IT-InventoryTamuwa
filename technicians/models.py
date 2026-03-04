@@ -62,7 +62,7 @@ class TechnicianService(models.Model):
 
 
 class TechnicianRecommendation(models.Model):
-    """Recommendations made by technicians for assets"""
+    """Recommendations made by technicians"""
     RECOMMENDATION_TYPES = [
         ('REPAIR', 'Repair'),
         ('REPLACE', 'Replace'),
@@ -73,7 +73,8 @@ class TechnicianRecommendation(models.Model):
     ]
     
     technician = models.ForeignKey(Technician, on_delete=models.CASCADE, related_name='recommendations')
-    asset = models.ForeignKey('assets.Asset', on_delete=models.CASCADE, related_name='technician_recommendations')
+    category_name = models.CharField(max_length=200, blank=True, verbose_name="Category / Item (optional)",
+                                     help_text='e.g. Laptops, Printers, Network Switch')
     recommendation_type = models.CharField(max_length=20, choices=RECOMMENDATION_TYPES)
     description = models.TextField(verbose_name="Recommendation Details")
     estimated_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="Estimated Cost (KES)")
@@ -89,4 +90,5 @@ class TechnicianRecommendation(models.Model):
         verbose_name_plural = 'Technician Recommendations'
 
     def __str__(self):
-        return f"{self.get_recommendation_type_display()} for {self.asset.asset_id} by {self.technician.technician_name}"
+        label = self.category_name or 'General'
+        return f"{self.get_recommendation_type_display()} for {label} by {self.technician.technician_name}"

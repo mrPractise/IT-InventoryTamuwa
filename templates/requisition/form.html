@@ -51,6 +51,14 @@
                     {{ form.description }}
                     {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Linked Issue <span class="text-muted fw-normal small">(optional)</span></label>
+                    {{ form.linked_issue }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Linked Project <span class="text-muted fw-normal small">(optional)</span></label>
+                    {{ form.linked_project }}
+                </div>
             </div>
 
         <!-- Items Table -->

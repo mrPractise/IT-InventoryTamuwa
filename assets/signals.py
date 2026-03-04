@@ -90,26 +90,60 @@ def handle_assignment_history(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Asset)
 def auto_close_maintenance_logs_on_status_change(sender, instance, created, **kwargs):
-    """When asset status moves AWAY from 'Under Maintenance', auto-close any open logs.
-    We do NOT auto-create logs here — maintenance logs must be created explicitly."""
-    from maintenance.models import MaintenanceLog
+    """When asset status changes:
+    - TO 'Under Maintenance': auto-create an open log with Investigation action.
+    - AWAY FROM 'Under Maintenance': auto-close any open logs.
+    """
+    # Guard against recursive signal loops from maintenance.signals
+    if getattr(instance, '_skip_maintenance_signal', False):
+        return
+
+    from maintenance.models import MaintenanceLog, ActionTakenOption
 
     if not created:
         old_instance = getattr(instance, '_old_instance', None)
         if old_instance:
             old_status = old_instance.status
+            new_status = instance.status
 
-            # Status changed AWAY FROM Under Maintenance → auto-close open logs
-            if (instance.status and old_status and
-                    old_status.name == 'Under Maintenance' and
-                    instance.status.name != 'Under Maintenance'):
-                MaintenanceLog.objects.filter(
-                    asset=instance,
-                    maintenance_status='Open'
-                ).update(
-                    maintenance_status='Closed',
-                    date_completed=timezone.now().date(),
-                )
+            if old_status and new_status and old_status.name != new_status.name:
+
+                # Status changed TO Under Maintenance → auto-create open log
+                if new_status.name == 'Under Maintenance':
+                    # Only create if no open log already exists
+                    if not MaintenanceLog.objects.filter(asset=instance, maintenance_status='Open').exists():
+                        investigation = ActionTakenOption.objects.filter(name='Investigation').first()
+                        MaintenanceLog.objects.create(
+                            asset=instance,
+                            date_reported=timezone.now().date(),
+                            description=f'Asset {instance.asset_id} status changed to Under Maintenance.',
+                            action_taken=investigation,
+                            maintenance_status='Open',
+                            reported_by=instance.updated_by,
+                        )
+
+                # Status changed AWAY FROM Under Maintenance → auto-close open logs
+                elif old_status.name == 'Under Maintenance':
+                    MaintenanceLog.objects.filter(
+                        asset=instance,
+                        maintenance_status='Open'
+                    ).update(
+                        maintenance_status='Closed',
+                        date_completed=timezone.now().date(),
+                    )
+    elif created:
+        # New asset created already Under Maintenance
+        if instance.status and instance.status.name == 'Under Maintenance':
+            from maintenance.models import MaintenanceLog, ActionTakenOption
+            investigation = ActionTakenOption.objects.filter(name='Investigation').first()
+            MaintenanceLog.objects.create(
+                asset=instance,
+                date_reported=timezone.now().date(),
+                description=f'Asset {instance.asset_id} added under Maintenance.',
+                action_taken=investigation,
+                maintenance_status='Open',
+                reported_by=instance.created_by,
+            )
 
 
 @receiver(post_save, sender=Asset)

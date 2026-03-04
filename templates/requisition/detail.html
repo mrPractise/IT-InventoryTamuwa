@@ -162,42 +162,36 @@
 
 </div>
 
-{% with linked_issues=req.issues.all linked_projects=req.projects.all %}
-{% if linked_issues or linked_projects %}
+{% if req.linked_issue or req.linked_project %}
 <div class="row g-3 mt-1">
-    {% if linked_issues %}
+    {% if req.linked_issue %}
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header"><i class="bi bi-bug me-2"></i>Linked Issues <span class="badge bg-secondary ms-1">{{ linked_issues|length }}</span></div>
+            <div class="card-header"><i class="bi bi-bug me-2"></i>Linked Issue</div>
             <div class="card-body p-2">
-                {% for issue in linked_issues %}
-                <a href="{% url 'issues:issue_detail' issue.pk %}" class="d-flex justify-content-between align-items-center text-decoration-none text-dark border rounded p-2 mb-1 bg-light">
-                    <span class="small fw-semibold">{{ issue.title }}</span>
-                    <span class="badge {% if issue.status == 'Open' %}bg-danger{% elif issue.status == 'Monitoring' %}bg-warning text-dark{% elif issue.status == 'Resolved' %}bg-success{% else %}bg-secondary{% endif %}">{{ issue.status }}</span>
+                <a href="{% url 'issues:issue_detail' req.linked_issue.pk %}" class="d-flex justify-content-between align-items-center text-decoration-none text-dark border rounded p-2 bg-light">
+                    <span class="small fw-semibold">{{ req.linked_issue.title }}</span>
+                    <span class="badge {% if req.linked_issue.status == 'Open' %}bg-danger{% elif req.linked_issue.status == 'Monitoring' %}bg-warning text-dark{% elif req.linked_issue.status == 'Resolved' %}bg-success{% else %}bg-secondary{% endif %}">{{ req.linked_issue.status }}</span>
                 </a>
-                {% endfor %}
             </div>
         </div>
     </div>
     {% endif %}
 
-    {% if linked_projects %}
+    {% if req.linked_project %}
     <div class="col-md-6">
         <div class="card">
-            <div class="card-header"><i class="bi bi-kanban me-2"></i>Linked Projects <span class="badge bg-secondary ms-1">{{ linked_projects|length }}</span></div>
+            <div class="card-header"><i class="bi bi-kanban me-2"></i>Linked Project</div>
             <div class="card-body p-2">
-                {% for project in linked_projects %}
-                <a href="{% url 'issues:project_detail' project.pk %}" class="d-flex justify-content-between align-items-center text-decoration-none text-dark border rounded p-2 mb-1 bg-light">
-                    <span class="small fw-semibold">{{ project.title }}</span>
-                    <span class="badge {% if project.status == 'Done' %}bg-success{% elif project.status == 'Rejected' %}bg-danger{% else %}bg-secondary{% endif %}">{{ project.status }}</span>
+                <a href="{% url 'issues:project_detail' req.linked_project.pk %}" class="d-flex justify-content-between align-items-center text-decoration-none text-dark border rounded p-2 bg-light">
+                    <span class="small fw-semibold">{{ req.linked_project.title }}</span>
+                    <span class="badge {% if req.linked_project.status == 'Done' %}bg-success{% elif req.linked_project.status == 'Rejected' %}bg-danger{% else %}bg-secondary{% endif %}">{{ req.linked_project.status }}</span>
                 </a>
-                {% endfor %}
             </div>
         </div>
     </div>
     {% endif %}
 </div>
 {% endif %}
-{% endwith %}
 
 {% endblock %}

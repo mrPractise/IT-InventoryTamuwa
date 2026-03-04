@@ -44,10 +44,14 @@
                         {{ issue.department.name|default:"—" }}
                     </div>
                     <div class="col-md-4">
-                        <small class="text-muted d-block">Linked Requisition</small>
-                        {% if issue.requisition %}
-                        <a href="{% url 'requisition:detail' issue.requisition.pk %}" class="badge bg-info text-dark text-decoration-none">{{ issue.requisition.req_no }}</a>
+                        <small class="text-muted d-block">Linked Requisitions</small>
+                        {% with reqs=issue.requisitions.all %}
+                        {% if reqs %}
+                            {% for req in reqs %}
+                            <a href="{% url 'requisition:detail' req.pk %}" class="badge bg-info text-dark text-decoration-none me-1">{{ req.req_no }}</a>
+                            {% endfor %}
                         {% else %}<span class="text-muted">—</span>{% endif %}
+                        {% endwith %}
                     </div>
                 </div>
                 <div class="col-md-4 mb-3">

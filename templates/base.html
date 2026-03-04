@@ -245,25 +245,25 @@
             </li>
             <li>
                 <a href="{% url 'requisition:list' %}"
-                    class="{% if request.resolver_match.url_name == 'list' or request.resolver_match.url_name == 'detail' or request.resolver_match.url_name == 'create' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'requisition' and request.resolver_match.url_name in 'list,detail,create' %}active{% endif %}">
                     <i class="bi bi-receipt"></i> Requisitions
                 </a>
             </li>
             <li>
                 <a href="{% url 'requisition:unapproved_items' %}"
-                    class="{% if request.resolver_match.url_name == 'unapproved_items' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'requisition' and request.resolver_match.url_name == 'unapproved_items' %}active{% endif %}">
                     <i class="bi bi-x-circle"></i> Not Approved Items
                 </a>
             </li>
             <li>
                 <a href="{% url 'requisition:bought_items_queue' %}"
-                    class="{% if request.resolver_match.url_name == 'bought_items_queue' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'requisition' and request.resolver_match.url_name == 'bought_items_queue' %}active{% endif %}">
                     <i class="bi bi-cart-check"></i> Bought Items Queue
                 </a>
             </li>
             <li>
                 <a href="{% url 'technicians:list' %}"
-                    class="{% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'technicians' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'technicians' %}active{% endif %}">
                     <i class="bi bi-wrench-adjustable-circle"></i> Technicians
                 </a>
             </li>
@@ -294,6 +294,15 @@
             <li>
                 <a href="{% url 'users:profile' %}">
                     <i class="bi bi-person-circle"></i> Profile
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'dashboard:notifications' %}"
+                    class="{% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+                    <i class="bi bi-bell"></i> Notifications
+                    {% if unread_notifications_count %}
+                    <span class="badge bg-danger ms-auto" style="font-size:.7rem;padding:2px 6px;border-radius:999px;">{{ unread_notifications_count }}</span>
+                    {% endif %}
                 </a>
             </li>
             {% if user.is_superuser or user.profile.role == 'super_admin' or user.profile.role == 'admin' %}
@@ -646,6 +655,38 @@
         
         // Initialize form persistence
         FormPersistence.init();
+
+        // ============================================
+        // PASSWORD TOGGLE - show/hide password fields
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('input[type="password"]').forEach(function (input) {
+                // Wrap the input in a position-relative container if not already
+                const parent = input.parentNode;
+                if (parent.classList.contains('password-toggle-wrapper')) return;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'password-toggle-wrapper position-relative';
+                parent.insertBefore(wrapper, input);
+                wrapper.appendChild(input);
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-link position-absolute top-50 end-0 translate-middle-y pe-2 text-muted';
+                btn.style.zIndex = '5';
+                btn.innerHTML = '<i class="bi bi-eye"></i>';
+                btn.setAttribute('tabindex', '-1');
+                btn.addEventListener('click', function () {
+                    const isPassword = input.type === 'password';
+                    input.type = isPassword ? 'text' : 'password';
+                    btn.innerHTML = isPassword ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+                });
+                wrapper.appendChild(btn);
+
+                // Ensure input doesn't overlap the toggle button
+                input.style.paddingRight = '2.5rem';
+            });
+        });
     </script>
 
     {% block extra_js %}{% endblock %}

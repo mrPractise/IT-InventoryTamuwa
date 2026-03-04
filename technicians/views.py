@@ -34,7 +34,7 @@ def technician_detail(request, pk):
     technician = get_object_or_404(Technician, pk=pk)
     assistants = technician.assistants.filter(is_active=True)
     services = technician.services.filter(is_active=True)
-    recommendations = technician.recommendations.select_related('asset').order_by('-created_at')[:10]
+    recommendations = technician.recommendations.order_by('-created_at')[:10]
     
     return render(request, 'technicians/detail.html', {
         'technician': technician,
@@ -164,8 +164,6 @@ def recommendation_create(request):
         asset_id = request.GET.get('asset')
         if technician_id:
             initial['technician'] = technician_id
-        if asset_id:
-            initial['asset'] = asset_id
         if initial:
             form = TechnicianRecommendationForm(initial=initial)
     
@@ -178,7 +176,7 @@ def recommendation_create(request):
 @login_required
 def recommendation_list(request):
     """List all technician recommendations"""
-    recommendations = TechnicianRecommendation.objects.select_related('technician', 'asset').order_by('-created_at')
+    recommendations = TechnicianRecommendation.objects.select_related('technician').order_by('-created_at')
     
     # Filter by completion status
     status_filter = request.GET.get('status')

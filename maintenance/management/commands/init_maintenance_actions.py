@@ -7,10 +7,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         actions = [
-            'Awaiting approval for repair',
-            'De-Commissioned',
             'Investigation',
+            'Waiting Approval',
             'To Nairobi',
+            'Decommissioned',
         ]
         
         for action_name in actions:

@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 from assets.models import Asset, Department, Category
-from requisition.models import Requisition
 from django.utils import timezone
 
 
@@ -31,12 +30,6 @@ class Issue(models.Model):
     )
     department = models.ForeignKey(
         Department, null=True, blank=True, on_delete=models.SET_NULL,
-        related_name='issues'
-    )
-
-    # Optional link to a requisition (e.g. monitoring revealed need to buy something)
-    requisition = models.ForeignKey(
-        Requisition, null=True, blank=True, on_delete=models.SET_NULL,
         related_name='issues'
     )
 
@@ -101,12 +94,6 @@ class Project(models.Model):
         help_text='Link asset categories to show available quantities'
     )
 
-    # Linked requisitions
-    requisitions = models.ManyToManyField(
-        Requisition, blank=True,
-        related_name='projects'
-    )
-
     reported_by = models.ForeignKey(
         User, null=True, blank=True, on_delete=models.SET_NULL,
         related_name='reported_projects'
@@ -131,6 +118,30 @@ class Project(models.Model):
             ).count()
             result.append((cat, available))
         return result
+
+
+class ProjectItem(models.Model):
+    """Individual cost line items for a project (replaces free-text cost_breakdown)"""
+    ITEM_TYPE_CHOICES = [
+        ('Asset', 'Asset'),
+        ('Service', 'Service'),
+    ]
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='cost_items')
+    item_type = models.CharField(max_length=10, choices=ITEM_TYPE_CHOICES, default='Asset')
+    item_name = models.CharField(max_length=200, verbose_name='Item / Service')
+    unit_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    quantity = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return f"{self.item_name} x{self.quantity}"
+
+    @property
+    def total_price(self):
+        return self.unit_price * self.quantity
 
 
 class ProjectComment(models.Model):

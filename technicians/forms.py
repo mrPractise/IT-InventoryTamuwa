@@ -47,10 +47,10 @@ class TechnicianServiceForm(forms.ModelForm):
 class TechnicianRecommendationForm(forms.ModelForm):
     class Meta:
         model = TechnicianRecommendation
-        fields = ['technician', 'asset', 'recommendation_type', 'description', 'estimated_cost', 'priority', 'notes']
+        fields = ['technician', 'category_name', 'recommendation_type', 'description', 'estimated_cost', 'priority', 'notes']
         widgets = {
             'technician': forms.Select(attrs={'class': 'form-control'}),
-            'asset': forms.Select(attrs={'class': 'form-control'}),
+            'category_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Laptops, Printers, Network Switch'}),
             'recommendation_type': forms.Select(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'estimated_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),

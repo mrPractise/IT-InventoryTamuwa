@@ -16,4 +16,5 @@ urlpatterns = [
     path('projects/create/', views.project_create, name='project_create'),
     path('projects/<int:pk>/', views.project_detail, name='project_detail'),
     path('projects/<int:pk>/edit/', views.project_update, name='project_update'),
+    path('api/category-assets/<int:category_id>/', views.category_assets_api, name='category_assets_api'),
 ]

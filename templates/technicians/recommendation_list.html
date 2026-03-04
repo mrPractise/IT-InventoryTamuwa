@@ -43,7 +43,7 @@
                     <tr>
                         <th>Date</th>
                         <th>Technician</th>
-                        <th>Asset</th>
+                        <th>Category / Item</th>
                         <th>Type</th>
                         <th>Priority</th>
                         <th>Status</th>
@@ -60,9 +60,7 @@
                             <strong>{{ rec.technician.technician_name }}</strong>
                             <br><small class="text-muted">{{ rec.technician.company_name }}</small>
                         </td>
-                        <td>
-                            <a href="{% url 'assets:detail' rec.asset.pk %}">{{ rec.asset.asset_id }}</a>
-                        </td>
+                        <td>{{ rec.category_name|default:"—" }}</td>
                         <td>{{ rec.get_recommendation_type_display }}</td>
                         <td>
                             <span class="badge bg-{% if rec.priority == 'URGENT' %}danger{% elif rec.priority == 'HIGH' %}warning{% elif rec.priority == 'MEDIUM' %}info{% else %}secondary{% endif %}">

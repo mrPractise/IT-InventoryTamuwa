@@ -208,7 +208,7 @@
                     <div class="list-group-item">
                         <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <h6 class="mb-1">{{ rec.get_recommendation_type_display }} for {{ rec.asset.asset_id }}</h6>
+                                <h6 class="mb-1">{{ rec.get_recommendation_type_display }}{% if rec.category_name %} — {{ rec.category_name }}{% endif %}</h6>
                                 <p class="mb-1">{{ rec.description|truncatewords:20 }}</p>
                                 <small class="text-muted">{{ rec.created_at|date:"M d, Y" }}</small>
                             </div>

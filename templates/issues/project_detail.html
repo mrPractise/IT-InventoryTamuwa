@@ -63,10 +63,30 @@
                 </div>
                 {% endif %}
 
-                {% if project.cost_breakdown %}
+                {% if cost_items %}
                 <div class="mb-3">
                     <small class="text-muted d-block mb-1">Cost Breakdown</small>
-                    <div class="border rounded p-3 bg-light" style="white-space: pre-line;">{{ project.cost_breakdown }}</div>
+                    <div class="table-responsive border rounded">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr><th>Type</th><th>Item</th><th class="text-end">Unit Price</th><th class="text-center">Qty</th><th class="text-end">Total</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cost_items %}
+                                <tr>
+                                    <td><span class="badge bg-{% if item.item_type == 'Asset' %}primary{% else %}info text-dark{% endif %} bg-opacity-75">{{ item.item_type }}</span></td>
+                                    <td>{{ item.item_name }}</td>
+                                    <td class="text-end">KES {{ item.unit_price|floatformat:2 }}</td>
+                                    <td class="text-center">{{ item.quantity }}</td>
+                                    <td class="text-end fw-semibold">KES {{ item.total_price|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td class="text-end fw-bold text-success">KES {{ total_cost|floatformat:2 }}</td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
                 </div>
                 {% endif %}
 
@@ -84,26 +104,37 @@
         <div class="card mb-3">
             <div class="card-header"><i class="bi bi-box me-2"></i>Asset Availability by Category</div>
             <div class="card-body p-0">
-                <table class="table table-sm mb-0">
-                    <thead class="table-light"><tr><th>Category</th><th>Available Assets</th></tr></thead>
-                    <tbody>
-                        {% for cat, count in category_counts %}
-                        <tr>
-                            <td>{{ cat.name }}</td>
-                            <td>
-                                <span class="badge bg-{% if count > 0 %}success{% else %}danger{% endif %}">
-                                    {{ count }} available
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                {% for item in category_counts %}
+                <div class="p-3 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>{{ item.category.name }}</strong>
+                        <span class="badge bg-{% if item.available_count > 0 %}success{% else %}danger{% endif %}">
+                            {{ item.available_count }} available
+                        </span>
+                    </div>
+                    {% if item.assets %}
+                    <div class="table-responsive">
+                        <table class="table table-xs table-sm mb-0" style="font-size:0.82rem;">
+                            <thead class="table-light"><tr><th>Asset ID</th><th>Status</th><th>Location</th></tr></thead>
+                            <tbody>
+                                {% for a in item.assets %}
+                                <tr>
+                                    <td><a href="{% url 'assets:detail' a.pk %}">{{ a.asset_id }}</a></td>
+                                    <td><span class="badge bg-{% if a.status.name == 'Available' %}success{% elif a.status.name == 'Under Maintenance' %}warning text-dark{% elif a.status.name == 'In Use' %}primary{% else %}secondary{% endif %} bg-opacity-75">{{ a.status.name }}</span></td>
+                                    <td class="text-muted">{{ a.assigned_to|default:a.department|default:"—" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
             </div>
         </div>
         {% endif %}
 
-        <!-- Linked Requisitions -->
+        <!-- Linked Requisitions (tagged from Requisitions side) -->
         {% with reqs=project.requisitions.all %}
         {% if reqs %}
         <div class="card mb-3">

@@ -1,13 +1,12 @@
 from django import forms
 from .models import Issue, Project
 from assets.models import Asset, Department, Category
-from requisition.models import Requisition
 
 
 class IssueForm(forms.ModelForm):
     class Meta:
         model = Issue
-        fields = ['title', 'description', 'priority', 'status', 'asset', 'department', 'requisition']
+        fields = ['title', 'description', 'priority', 'status', 'asset', 'department']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
@@ -15,7 +14,6 @@ class IssueForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-control'}),
             'asset': forms.Select(attrs={'class': 'form-control'}),
             'department': forms.Select(attrs={'class': 'form-control'}),
-            'requisition': forms.Select(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -24,8 +22,6 @@ class IssueForm(forms.ModelForm):
         self.fields['asset'].required = False
         self.fields['department'].queryset = Department.objects.all().order_by('name')
         self.fields['department'].required = False
-        self.fields['requisition'].queryset = Requisition.objects.all().order_by('-created_at')
-        self.fields['requisition'].required = False
         self.fields['description'].required = False
 
 
@@ -35,7 +31,7 @@ class ProjectForm(forms.ModelForm):
         fields = [
             'title', 'description', 'date', 'problem_statement',
             'cost_breakdown', 'conclusion', 'priority', 'status',
-            'pending_reason', 'rejected_reason', 'categories', 'requisitions',
+            'pending_reason', 'rejected_reason', 'categories',
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
@@ -52,7 +48,6 @@ class ProjectForm(forms.ModelForm):
             'pending_reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'rejected_reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'categories': forms.CheckboxSelectMultiple(),
-            'requisitions': forms.CheckboxSelectMultiple(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -65,8 +60,6 @@ class ProjectForm(forms.ModelForm):
         self.fields['pending_reason'].required = False
         self.fields['rejected_reason'].required = False
         self.fields['categories'].required = False
-        self.fields['requisitions'].queryset = Requisition.objects.all().order_by('-created_at')
-        self.fields['requisitions'].required = False
         self.fields['categories'].queryset = Category.objects.all().order_by('name')
 
     def clean(self):
