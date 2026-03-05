@@ -1,1 +1,1 @@
-web: python manage.py migrate && python manage.py init_superuser && gunicorn inventory_system.wsgi --log-file -
+web: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn inventory_system.wsgi:application --bind 0.0.0.0:$PORT
