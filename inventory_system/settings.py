@@ -89,31 +89,14 @@ WSGI_APPLICATION = 'inventory_system.wsgi.application'
 
 
 # Database
-# Supports three modes:
-#   1. Railway/Heroku: DATABASE_URL env var (takes priority)
-#   2. Docker:         DB_HOST is set — individual vars
-#   3. Local dev:      falls back to SQLite
+# Railway injects DATABASE_URL automatically when Postgres plugin is added.
+# Falls back to SQLite for local development.
 DATABASE_URL = config('DATABASE_URL', default='')
 if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
     DATABASES['default']['ATOMIC_REQUESTS'] = True
-elif config('DB_HOST', default=''):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': config('DB_NAME', default='inventory_db'),
-            'USER': config('DB_USER', default='postgres'),
-            'PASSWORD': config('DB_PASSWORD', default='postgres'),
-            'HOST': config('DB_HOST', default='db'),
-            'PORT': config('DB_PORT', default='5432'),
-            'OPTIONS': {
-                'connect_timeout': 10,
-            },
-            'ATOMIC_REQUESTS': True,
-        }
-    }
 else:
     DATABASES = {
         'default': {
