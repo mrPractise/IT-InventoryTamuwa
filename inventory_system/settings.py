@@ -91,16 +91,10 @@ WSGI_APPLICATION = 'inventory_system.wsgi.application'
 
 
 # Database
-# Railway provides DB_* variables individually — construct DATABASE_URL from them
-# Falls back to SQLite for local development
-DB_HOST = config('DB_HOST', default='')
-if DB_HOST:
-    # Railway/Heroku style with individual vars
-    DB_NAME = config('DB_NAME', default='')
-    DB_USER = config('DB_USER', default='')
-    DB_PASSWORD = config('DB_PASSWORD', default='')
-    DB_PORT = config('DB_PORT', default='5432')
-    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Railway provides DATABASE_URL automatically when Postgres plugin is added.
+# Falls back to SQLite for local development.
+DATABASE_URL = config('DATABASE_URL', default='')
+if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
