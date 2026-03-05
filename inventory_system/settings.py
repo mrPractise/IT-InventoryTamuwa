@@ -204,7 +204,8 @@ REST_FRAMEWORK = {
 
 # Security Settings (for production)
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    # Do NOT set SECURE_SSL_REDIRECT — Railway/Nginx handles HTTPS at the proxy
+    # level. Setting it here causes redirect loops on health checks.
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_BROWSER_XSS_FILTER = True
