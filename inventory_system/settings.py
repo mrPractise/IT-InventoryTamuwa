@@ -4,6 +4,7 @@ Django settings for inventory_system project.
 
 from pathlib import Path
 import os
+import dj_database_url
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,8 +22,9 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
-# Nginx proxy settings
+# Nginx / Railway proxy settings
 USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=False, cast=bool)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 if config('SECURE_PROXY_SSL_HEADER', default=''):
     SECURE_PROXY_SSL_HEADER = tuple(config('SECURE_PROXY_SSL_HEADER').split(','))
 
@@ -87,8 +89,17 @@ WSGI_APPLICATION = 'inventory_system.wsgi.application'
 
 
 # Database
-# SQLite for quick local dev; PostgreSQL when DB_HOST is set (Docker / production)
-if config('DB_HOST', default=''):
+# Supports three modes:
+#   1. Railway/Heroku: DATABASE_URL env var (takes priority)
+#   2. Docker:         DB_HOST is set — individual vars
+#   3. Local dev:      falls back to SQLite
+DATABASE_URL = config('DATABASE_URL', default='')
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+    }
+    DATABASES['default']['ATOMIC_REQUESTS'] = True
+elif config('DB_HOST', default=''):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -97,11 +108,10 @@ if config('DB_HOST', default=''):
             'PASSWORD': config('DB_PASSWORD', default='postgres'),
             'HOST': config('DB_HOST', default='db'),
             'PORT': config('DB_PORT', default='5432'),
-            # Ensure data consistency with proper transaction handling
             'OPTIONS': {
                 'connect_timeout': 10,
             },
-            'ATOMIC_REQUESTS': True,  # Wrap each request in a transaction
+            'ATOMIC_REQUESTS': True,
         }
     }
 else:
@@ -109,7 +119,7 @@ else:
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
-            'ATOMIC_REQUESTS': True,  # Wrap each request in a transaction
+            'ATOMIC_REQUESTS': True,
         }
     }
 

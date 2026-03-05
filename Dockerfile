@@ -29,8 +29,8 @@ RUN dos2unix /app/entrypoint.sh
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh
 
-# Collect static files at build time
-RUN python manage.py collectstatic --noinput
+# Collect static files at build time (no DB needed for this step)
+RUN SECRET_KEY=build-only-placeholder python manage.py collectstatic --noinput
 
 EXPOSE 8000
 

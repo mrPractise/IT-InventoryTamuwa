@@ -6,6 +6,7 @@ from .models import (
     Category,
     StatusOption,
     Department,
+    Person,
     AssignmentHistory,
     ActivityLog,
 )
@@ -35,6 +36,12 @@ class StatusOptionSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "color", "is_active", "created_at"]
 
 
+class PersonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Person
+        fields = ["id", "first_name", "last_name", "full_name", "department"]
+
+
 class AssetSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
@@ -52,18 +59,18 @@ class AssetSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
-    assigned_to = UserSummarySerializer(read_only=True)
+    assigned_to = PersonSerializer(read_only=True)
     assigned_to_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(is_active=True),
+        queryset=Person.objects.all(),
         source="assigned_to",
         write_only=True,
         allow_null=True,
         required=False,
     )
-    last_known_user = UserSummarySerializer(read_only=True)
-    last_known_user_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(is_active=True),
-        source="last_known_user",
+    last_known_person = PersonSerializer(read_only=True)
+    last_known_person_id = serializers.PrimaryKeyRelatedField(
+        queryset=Person.objects.all(),
+        source="last_known_person",
         write_only=True,
         allow_null=True,
         required=False,
@@ -83,12 +90,13 @@ class AssetSerializer(serializers.ModelSerializer):
             "assigned_to_id",
             "department",
             "department_id",
-            "last_known_user",
-            "last_known_user_id",
+            "last_known_person",
+            "last_known_person_id",
             "status",
             "status_id",
             "admin_comments",
-            "qr_code",
+            "purchased_from",
+            "purchase_cost",
             "is_deleted",
             "created_at",
             "updated_at",
@@ -100,22 +108,24 @@ class AssignmentHistorySerializer(serializers.ModelSerializer):
     asset = serializers.SlugRelatedField(
         slug_field="asset_id", queryset=Asset.objects.all()
     )
-    user = UserSummarySerializer(read_only=True)
-    user_id = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(is_active=True),
-        source="user",
+    person = PersonSerializer(read_only=True)
+    person_id = serializers.PrimaryKeyRelatedField(
+        queryset=Person.objects.all(),
+        source="person",
         write_only=True,
         allow_null=True,
         required=False,
     )
+    department = DepartmentSerializer(read_only=True)
 
     class Meta:
         model = AssignmentHistory
         fields = [
             "id",
             "asset",
-            "user",
-            "user_id",
+            "person",
+            "person_id",
+            "department",
             "start_date",
             "end_date",
             "notes",
@@ -144,4 +154,3 @@ class ActivityLogSerializer(serializers.ModelSerializer):
             "ip_address",
         ]
         read_only_fields = fields
-

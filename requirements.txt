@@ -11,3 +11,4 @@ python-decouple
 gunicorn
 whitenoise
 djangorestframework
+dj-database-url

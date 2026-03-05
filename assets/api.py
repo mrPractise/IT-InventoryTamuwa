@@ -54,13 +54,14 @@ class AssetViewSet(viewsets.ModelViewSet):
     """
 
     serializer_class = AssetSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = [
         "asset_id",
         "serial_number",
         "model_description",
-        "assigned_to__username",
+        "assigned_to__first_name",
+        "assigned_to__last_name",
     ]
     ordering_fields = ["asset_id", "created_at", "purchase_date"]
     ordering = ["-created_at"]
@@ -69,7 +70,7 @@ class AssetViewSet(viewsets.ModelViewSet):
         qs = (
             Asset.objects.filter(is_deleted=False)
             .select_related(
-                "category", "status", "assigned_to", "department", "last_known_user"
+                "category", "status", "assigned_to", "department", "last_known_person"
             )
             .all()
         )
@@ -97,7 +98,7 @@ class AssignmentHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
 
     queryset = (
-        AssignmentHistory.objects.select_related("asset", "user")
+        AssignmentHistory.objects.select_related("asset", "person", "department")
         .all()
         .order_by("-start_date")
     )
@@ -117,4 +118,3 @@ class ActivityLogViewSet(viewsets.ReadOnlyModelViewSet):
     )
     serializer_class = ActivityLogSerializer
     permission_classes = [permissions.IsAuthenticated]
-
