@@ -1,1 +1,1 @@
-web: python manage.py migrate && python manage.py shell -c "from django.contrib.auth import get_user_model; User=get_user_model(); User.objects.filter(username='mickey').exists() or User.objects.create_superuser('mickey', '', 'mickey')" && gunicorn inventory_system.wsgi --log-file -
+web: python manage.py migrate && python manage.py init_superuser && gunicorn inventory_system.wsgi --log-file -
