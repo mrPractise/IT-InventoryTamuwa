@@ -18,9 +18,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,it-inventorytamuwa-production.up.railway.app', cast=lambda v: [s.strip() for s in v.split(',')])
 
 # Nginx / Railway proxy settings
 USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=False, cast=bool)
@@ -53,6 +53,8 @@ INSTALLED_APPS = [
     'technicians.apps.TechniciansConfig',
     # API app - centralized API endpoints
     'api.apps.ApiConfig',
+
+    'whitenoise.runserver_nostatic',
 ]
 
 MIDDLEWARE = [
@@ -89,15 +91,22 @@ WSGI_APPLICATION = 'inventory_system.wsgi.application'
 
 
 # Database
-# Railway injects DATABASE_URL automatically when Postgres plugin is added.
-# Falls back to SQLite for local development.
-DATABASE_URL = config('DATABASE_URL', default='')
-if DATABASE_URL:
+# Railway provides DB_* variables individually — construct DATABASE_URL from them
+# Falls back to SQLite for local development
+DB_HOST = config('DB_HOST', default='')
+if DB_HOST:
+    # Railway/Heroku style with individual vars
+    DB_NAME = config('DB_NAME', default='')
+    DB_USER = config('DB_USER', default='')
+    DB_PASSWORD = config('DB_PASSWORD', default='')
+    DB_PORT = config('DB_PORT', default='5432')
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
     DATABASES['default']['ATOMIC_REQUESTS'] = True
 else:
+    # Local SQLite fallback
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -152,8 +161,12 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://it-inventorytamuwa-production.up.railway.app', cast=lambda v: [s.strip() for s in v.split(',')])
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
