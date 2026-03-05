@@ -6,7 +6,7 @@
   },
   "deploy": {
     "startCommand": "python manage.py migrate && gunicorn inventory_system.wsgi --log-file -",
-    "healthcheckPath": "/",
+    "healthcheckPath": "/health/",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3

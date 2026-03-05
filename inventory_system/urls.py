@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponse
 
 # Customize admin site
 admin.site.site_header = "IT Inventory Administration"
@@ -13,7 +14,13 @@ admin.site.index_title = "Welcome to IT Inventory Administration"
 
 from users import views as user_views
 
+def health_check(request):
+    """Simple health check endpoint for Railway — no auth required."""
+    return HttpResponse("OK", content_type="text/plain", status=200)
+
+
 urlpatterns = [
+    path("health/", health_check, name="health_check"),
     path("admin/", admin.site.urls),
     path("", include("dashboard.urls")),
     path("assets/", include("assets.urls")),
