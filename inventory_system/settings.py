@@ -20,7 +20,12 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-produc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,it-inventorytamuwa-production.up.railway.app', cast=lambda v: [s.strip() for s in v.split(',')])
+# ALLOWED_HOSTS: set via Railway Variables, or defaults to localhost + any Railway domain
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,.up.railway.app',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
 
 # Nginx / Railway proxy settings
 USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=False, cast=bool)
