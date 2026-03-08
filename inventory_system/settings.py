@@ -21,7 +21,10 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-produc
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # ALLOWED_HOSTS: hostname only (no https:// or trailing slash)
-ALLOWED_HOSTS = ['it-inventorytamuwa-production.up.railway.app']
+ALLOWED_HOSTS = ['ict-inventory.up.railway.app']
+
+CSRF_TRUSTED_ORIGINS = ['https://ict-inventory.up.railway.app']
+
 
 # Nginx / Railway proxy settings
 USE_X_FORWARDED_HOST = config('USE_X_FORWARDED_HOST', default=False, cast=bool)
