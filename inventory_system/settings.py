@@ -115,13 +115,7 @@ WSGI_APPLICATION = 'inventory_system.wsgi.application'
 # DATABASE
 # ===============================
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=True,
-    )
-}
+DATABASES =os.environ.get('DATABASE_URL')
 
 
 # ===============================
