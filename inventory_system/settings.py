@@ -21,7 +21,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-produc
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 # ALLOWED_HOSTS: hostname only (no https:// or trailing slash)
-ALLOWED_HOSTS = ['ict-inventory.up.railway.app']
+ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = ['https://ict-inventory.up.railway.app']
 
