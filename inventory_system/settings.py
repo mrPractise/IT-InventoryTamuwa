@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django.contrib.sessions',
     'django.contrib.messages',
+    # Static handling
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
 
     'rest_framework',
@@ -64,8 +66,7 @@ INSTALLED_APPS = [
     # API
     'api.apps.ApiConfig',
 
-    # Static handling
-    'whitenoise.runserver_nostatic',
+    
 ]
 
 
