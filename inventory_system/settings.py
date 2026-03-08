@@ -14,19 +14,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 # ===============================
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+DEBUG = os.environ.get('DEBUG', 'False') == 'False'
 
-DEBUG = config('DEBUG', default=False, cast=bool)
-
-ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS",
-    default="ict-inventory.up.railway.app"
-).split(",")
-
-CSRF_TRUSTED_ORIGINS = config(
-    "CSRF_TRUSTED_ORIGINS",
-    default="https://ict-inventory.up.railway.app"
-).split(",")
+ALLOWED_HOSTS =["ict-inventory.up.railway.app"]
+CSRF_TRUSTED_ORIGINS =["https://ict-inventory.up.railway.app"]
 
 
 # Railway / Proxy support
