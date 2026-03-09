@@ -22,6 +22,9 @@ ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS', 
     default='localhost,127.0.0.1,.railway.app,healthcheck.railway.app'
 ).split(',')
+# Ensure healthcheck.railway.app is always present if not provided in env
+if 'healthcheck.railway.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('healthcheck.railway.app')
 
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS', 
