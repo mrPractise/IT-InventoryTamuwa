@@ -6,7 +6,7 @@
   },
   "deploy": {
     "preDeployCommand": "python manage.py migrate && python manage.py ensure_superuser",
-    "startCommand": "python manage.py migrate && python manage.py ensure_superuser && gunicorn inventory_system.wsgi:application --bind 0.0.0.0:$PORT --log-file -",
+    "startCommand": "python manage.py migrate && gunicorn inventory_system.wsgi:application --bind 0.0.0.0:$PORT --log-file -",
     "healthcheckPath": "/health/",
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
