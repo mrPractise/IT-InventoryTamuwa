@@ -13,13 +13,13 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         self.stdout.write('Initializing default data...')
         
-        # Create default status options
+        # Create default asset status options
         status_options = [
-            {'name': 'In Use', 'color': '#28a745'},
-            {'name': 'Available', 'color': '#17a2b8'},
-            {'name': 'Under Maintenance', 'color': '#ffc107'},
-            {'name': 'Missing', 'color': '#dc3545'},
-            {'name': 'Retired', 'color': '#6c757d'},
+            {'name': 'In Use',              'color': '#28a745'},
+            {'name': 'Available',           'color': '#17a2b8'},
+            {'name': 'Missing',             'color': '#dc3545'},
+            {'name': 'Retired',             'color': '#6c757d'},
+            {'name': 'Under Maintenance',   'color': '#ffc107'},
         ]
         
         for option in status_options:
@@ -28,16 +28,16 @@ class Command(BaseCommand):
                 defaults={'color': option['color'], 'is_active': True}
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f'Created status: {option["name"]}'))
+                self.stdout.write(self.style.SUCCESS(f'  Created status: {option["name"]}'))
             else:
-                self.stdout.write(f'Status already exists: {option["name"]}')
+                self.stdout.write(f'  Status already exists: {option["name"]}')
         
-        # Create default action taken options
+        # Create default maintenance action options
         action_options = [
-            {'name': 'Investigation', 'description': 'Initial investigation of the issue'},
-            {'name': 'Waiting Approval', 'description': 'Waiting for approval to proceed'},
-            {'name': 'To Nairobi', 'description': 'Sent to Nairobi for repairs'},
-            {'name': 'Decommissioned', 'description': 'Asset has been decommissioned'},
+            {'name': 'Investigation',       'description': 'Initial investigation of the issue'},
+            {'name': 'Awaiting Approval',   'description': 'Waiting for approval to proceed'},
+            {'name': 'De-Commissioned',     'description': 'Asset has been de-commissioned'},
+            {'name': 'To Nairobi',          'description': 'Sent to Nairobi office for repairs'},
         ]
         
         for option in action_options:
@@ -46,8 +46,8 @@ class Command(BaseCommand):
                 defaults={'description': option['description'], 'is_active': True}
             )
             if created:
-                self.stdout.write(self.style.SUCCESS(f'Created action: {option["name"]}'))
+                self.stdout.write(self.style.SUCCESS(f'  Created action: {option["name"]}'))
             else:
-                self.stdout.write(f'Action already exists: {option["name"]}')
+                self.stdout.write(f'  Action already exists: {option["name"]}')
         
         self.stdout.write(self.style.SUCCESS('Default data initialization complete!'))

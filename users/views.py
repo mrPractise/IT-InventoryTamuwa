@@ -163,6 +163,49 @@ def add_department_view(request):
 
 
 @login_required
+@user_passes_test(lambda u: u.is_superuser or (hasattr(u, 'profile') and u.profile.is_admin()))
+def edit_person_view(request, person_id):
+    """View to edit an existing person."""
+    person = get_object_or_404(Person, id=person_id)
+    if request.method == 'POST':
+        form = PersonForm(request.POST, instance=person)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Person {person.full_name} updated successfully.")
+            return redirect('users:person_assets', person_id=person.id)
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+    else:
+        form = PersonForm(instance=person)
+
+    return render(request, 'users/add_person.html', {'form': form, 'title': 'Edit Person', 'editing': True, 'obj': person})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or (hasattr(u, 'profile') and u.profile.is_admin()))
+def edit_department_view(request, dept_id):
+    """View to edit an existing department."""
+    dept = get_object_or_404(Department, pk=dept_id)
+    if request.method == 'POST':
+        form = DepartmentForm(request.POST, instance=dept)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Department '{dept.name}' updated successfully.")
+            return redirect('users:department_assets', dept_id=dept.id)
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+    else:
+        form = DepartmentForm(instance=dept)
+
+    return render(request, 'users/add_department.html', {'form': form, 'title': 'Edit Department', 'editing': True, 'obj': dept})
+
+
+
+@login_required
 def password_change_required_view(request):
     """Force password change on first login or when admin requires it"""
     if not hasattr(request.user, 'profile') or not request.user.profile.needs_password_change():

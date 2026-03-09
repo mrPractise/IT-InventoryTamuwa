@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block page_title %}Add New Person{% endblock %}
+{% block page_title %}{% if editing %}Edit Person{% else %}Add New Person{% endif %}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -11,11 +11,13 @@
                 <div class="card-body p-4">
                     <div class="d-flex align-items-center mb-4">
                         <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 me-3">
-                            <i class="bi bi-person-plus fs-4"></i>
+                            <i class="bi bi-person-{% if editing %}pencil{% else %}plus{% endif %} fs-4"></i>
                         </div>
                         <div>
-                            <h4 class="mb-0 fw-bold">Add New Person</h4>
-                            <p class="text-muted small mb-0">Create a new asset recipient</p>
+                            <h4 class="mb-0 fw-bold">{% if editing %}Edit {{ obj.full_name }}{% else %}Add New Person{%
+                                endif %}</h4>
+                            <p class="text-muted small mb-0">{% if editing %}Update this person's details{% else
+                                %}Create a new asset recipient{% endif %}</p>
                         </div>
                     </div>
 
@@ -42,9 +44,11 @@
 
                         <div class="d-grid gap-2 mt-4">
                             <button type="submit" class="btn btn-primary py-2 fw-bold">
-                                <i class="bi bi-check2-circle me-1"></i> Save Person
+                                <i class="bi bi-check2-circle me-1"></i> {% if editing %}Save Changes{% else %}Save
+                                Person{% endif %}
                             </button>
-                            <a href="{% url 'users:directory' %}" class="btn btn-light py-2">
+                            <a href="{% if editing %}{% url 'users:person_assets' obj.id %}{% else %}{% url 'users:directory' %}{% endif %}"
+                                class="btn btn-light py-2">
                                 Cancel
                             </a>
                         </div>
@@ -52,6 +56,7 @@
                 </div>
             </div>
 
+            {% if not editing %}
             <div class="mt-4 p-3 bg-light rounded-3 border">
                 <div class="d-flex">
                     <i class="bi bi-info-circle text-primary me-2"></i>
@@ -62,6 +67,7 @@
                     </small>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>

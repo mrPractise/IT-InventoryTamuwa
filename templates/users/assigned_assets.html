@@ -86,7 +86,7 @@
     <div class="person-avatar-lg">
         {{ person.first_name|first }}{{ person.last_name|first }}
     </div>
-    <div>
+    <div class="flex-grow-1">
         <h3>{{ person.full_name }}</h3>
         <p class="mb-0 small opacity-75">
             <i class="bi bi-building me-1"></i> {{ person.department.name|default:"No Department" }}
@@ -95,6 +95,11 @@
             <i class="bi bi-box-seam"></i> {{ assets.count }} Asset{{ assets.count|pluralize }} Assigned
         </div>
     </div>
+    {% if user.is_superuser or user.profile.is_admin %}
+    <a href="{% url 'users:edit_person' person.id %}" class="btn btn-sm btn-light ms-auto align-self-start">
+        <i class="bi bi-pencil me-1"></i> Edit
+    </a>
+    {% endif %}
 </div>
 
 <div class="card shadow-sm">
