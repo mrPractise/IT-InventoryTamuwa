@@ -59,3 +59,28 @@ class AssetForm(forms.ModelForm):
             if purchase_date.year > max_year:
                 raise forms.ValidationError(f"Purchase date year cannot be later than {max_year}.")
         return purchase_date
+
+    def clean_serial_number(self):
+        """Check for duplicate serial number within the selected category.
+        N/A and Generic are always allowed as duplicates."""
+        serial = (self.cleaned_data.get('serial_number') or '').strip()
+        ALLOWED_DUPLICATES = {'n/a', 'generic'}
+
+        if serial and serial.lower() not in ALLOWED_DUPLICATES:
+            category = self.cleaned_data.get('category')
+            if category:
+                qs = Asset.objects.filter(
+                    category=category,
+                    serial_number__iexact=serial,
+                    is_deleted=False,
+                )
+                # Exclude current instance when editing
+                if self.instance and self.instance.pk:
+                    qs = qs.exclude(pk=self.instance.pk)
+                if qs.exists():
+                    raise forms.ValidationError(
+                        f'Duplicate serial number "{serial}" — an active asset in the '
+                        f'"{category.name}" category already has this serial number. '
+                        'Enter a unique serial number, or use "N/A" / "Generic" if the device has no unique identifier.'
+                    )
+        return serial

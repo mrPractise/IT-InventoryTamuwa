@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
@@ -137,15 +138,22 @@ def asset_create(request):
                     next_num = 1
                 asset.asset_id = f"{asset.category.short_code}-{next_num:03d}"
             
-            asset.save()
+            try:
+                asset.save()
+            except ValidationError as e:
+                for field, errs in e.message_dict.items():
+                    for err in errs:
+                        messages.error(request, err)
+                return render(request, 'assets/form.html', {'form': form, 'title': 'Create Asset'})
             
             messages.success(request, f'Asset {asset.asset_id} created successfully!')
             return redirect('assets:detail', pk=asset.pk)
         else:
-            # Display form validation errors
+            # Display form validation errors clearly
             for field, errors in form.errors.items():
+                label = form.fields[field].label if field in form.fields else field
                 for error in errors:
-                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+                    messages.error(request, f"{label}: {error}" if field != '__all__' else error)
     else:
         form = AssetForm()
     
@@ -164,15 +172,22 @@ def asset_update(request, pk):
         if form.is_valid():
             asset = form.save(commit=False)
             asset.updated_by = request.user
-            asset.save()
+            try:
+                asset.save()
+            except ValidationError as e:
+                for field, errs in e.message_dict.items():
+                    for err in errs:
+                        messages.error(request, err)
+                return render(request, 'assets/form.html', {'form': form, 'title': 'Update Asset', 'asset': asset})
             
             messages.success(request, f'Asset {asset.asset_id} updated successfully!')
             return redirect('assets:detail', pk=asset.pk)
         else:
-            # Display form validation errors
+            # Display form validation errors clearly
             for field, errors in form.errors.items():
+                label = form.fields[field].label if field in form.fields else field
                 for error in errors:
-                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+                    messages.error(request, f"{label}: {error}" if field != '__all__' else error)
     else:
         form = AssetForm(instance=asset)
     

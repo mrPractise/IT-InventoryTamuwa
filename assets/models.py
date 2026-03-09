@@ -144,7 +144,9 @@ class Asset(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['category', 'serial_number'],
-                condition=models.Q(is_deleted=False),
+                condition=models.Q(is_deleted=False)
+                    & ~models.Q(serial_number__iexact='n/a')
+                    & ~models.Q(serial_number__iexact='generic'),
                 name='unique_serial_per_category'
             )
         ]
@@ -154,12 +156,26 @@ class Asset(models.Model):
         if not self.status_id:
             return  # Status not set yet; FK validation will handle it
 
-        if (self.assigned_to or self.department) and self.status.name != 'In Use':
-            # Status will be auto-updated by signal, but validate here too
-            pass
-
         if not self.assigned_to and not self.department and self.status.name == 'In Use':
             raise ValidationError("Cannot set status to 'In Use' without assigning to a person or department.")
+
+        # Check for duplicate serial number within the same category
+        # Skip the check for N/A and Generic (those are allowed as duplicates)
+        serial = (self.serial_number or '').strip()
+        ALLOWED_DUPLICATES = {'n/a', 'generic'}
+        if serial and serial.lower() not in ALLOWED_DUPLICATES and self.category_id:
+            qs = Asset.objects.filter(
+                category_id=self.category_id,
+                serial_number__iexact=serial,
+                is_deleted=False,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(
+                    {'serial_number': f'Duplicate serial number: an active asset in this category already has the serial number "{serial}". '
+                     'Use a unique serial number, or enter "N/A" / "Generic" if the device has no unique identifier.'}
+                )
 
     def save(self, *args, **kwargs):
         self.full_clean()
