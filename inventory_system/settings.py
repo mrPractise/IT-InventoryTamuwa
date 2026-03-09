@@ -14,11 +14,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 # ===============================
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
-DEBUG = os.environ.get('DEBUG', 'False') == 'False'
+SECRET_KEY = config('SECRET_KEY')
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS =["ict-inventory.up.railway.app","healthcheck.railway.app"]
-CSRF_TRUSTED_ORIGINS =["https://ict-inventory.up.railway.app"]
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,ict-inventory.up.railway.app,healthcheck.railway.app').split(',')
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://ict-inventory.up.railway.app').split(',')
 
 
 # Railway / Proxy support
@@ -115,7 +115,13 @@ WSGI_APPLICATION = 'inventory_system.wsgi.application'
 # DATABASE
 # ===============================
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+DATABASES = {
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
 
 
 
