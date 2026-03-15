@@ -7,12 +7,16 @@ class MaintenanceLogForm(forms.ModelForm):
     class Meta:
         model = MaintenanceLog
         fields = [
-            'asset', 'date_reported', 'date_completed', 'description',
+            'asset', 'timestamp', 'date_reported', 'date_completed', 'description',
             'action_taken', 'cost_of_repair', 'maintenance_status',
             'performed_by', 'requisition', 'notes'
         ]
         widgets = {
             'asset': forms.Select(attrs={'class': 'form-control'}),
+            'timestamp': forms.DateTimeInput(
+                attrs={'class': 'form-control', 'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M',
+            ),
             'date_reported': forms.DateInput(
                 attrs={'class': 'form-control', 'type': 'date'},
                 format='%Y-%m-%d',
@@ -39,6 +43,7 @@ class MaintenanceLogForm(forms.ModelForm):
         self.fields['performed_by'].queryset = Technician.objects.filter(is_active=True).order_by('company_name', 'technician_name')
         self.fields['requisition'].queryset = Requisition.objects.all().order_by('-created_at')
         self.fields['action_taken'].required = False
+        self.fields['timestamp'].required = False
         self.fields['date_completed'].required = False
         self.fields['cost_of_repair'].required = False
         self.fields['performed_by'].required = False

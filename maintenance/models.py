@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 from assets.models import Asset, Person
 
 
@@ -28,7 +29,7 @@ class MaintenanceLog(models.Model):
     ]
 
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='maintenance_logs')
-    timestamp = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(default=timezone.now, verbose_name="Maintenance Date/Time")
     date_reported = models.DateField()
     date_completed = models.DateField(null=True, blank=True)
     description = models.TextField(verbose_name="Description of Issue")

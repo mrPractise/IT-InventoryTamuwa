@@ -31,6 +31,59 @@
     </div>
 </div>
 
+{% if asset and assignment_history %}
+<!-- Previous Owners Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-clock-history"></i> Previous Owners
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Person / Department</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th style="width:50px"></th>
+                    </tr>
+                </thead>
+                <tbody id="previous-owners-tbody">
+                    {% for record in assignment_history %}
+                    <tr id="history-row-{{ record.pk }}">
+                        <td>
+                            {% if record.person %}
+                                <i class="bi bi-person me-1 text-muted"></i>{{ record.person.full_name }}
+                            {% elif record.department %}
+                                <i class="bi bi-building me-1 text-muted"></i>{{ record.department.name }}
+                            {% else %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ record.start_date|date:"d/m/Y" }}</td>
+                        <td>{{ record.end_date|date:"d/m/Y"|default:"Current" }}</td>
+                        <td>
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger delete-history-btn"
+                                    data-record-id="{{ record.pk }}"
+                                    title="Delete this record">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <small class="text-muted">
+            <i class="bi bi-info-circle me-1"></i>
+            Previous owners are updated automatically when you change "Assigned To" above.
+            Click <i class="bi bi-x-lg"></i> to remove incorrect records.
+        </small>
+    </div>
+</div>
+{% endif %}
+
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -54,6 +107,34 @@
                 }
             });
         }
+
+        // Delete previous owner record via AJAX
+        document.querySelectorAll('.delete-history-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const recordId = this.getAttribute('data-record-id');
+                if (!confirm('Delete this previous owner record?')) return;
+
+                fetch(`/assets/assignment-history/${recordId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const row = document.getElementById(`history-row-${recordId}`);
+                        if (row) {
+                            row.style.transition = 'opacity 0.3s';
+                            row.style.opacity = '0';
+                            setTimeout(() => row.remove(), 300);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            });
+        });
     });
     
     // Clear form data function

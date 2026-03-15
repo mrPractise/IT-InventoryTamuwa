@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Asset, Category, StatusOption, Department, Person, AssignmentHistory, ActivityLog
+from .models import Asset, Category, StatusOption, Department, Person, AssignmentHistory, ActivityLog, AssetLink
 
 
 @admin.register(Category)
@@ -98,3 +98,12 @@ class ActivityLogAdmin(admin.ModelAdmin):
     search_fields = ['asset__asset_id', 'user__username', 'description']
     readonly_fields = ['timestamp']
     date_hierarchy = 'timestamp'
+
+
+@admin.register(AssetLink)
+class AssetLinkAdmin(admin.ModelAdmin):
+    list_display = ['asset', 'linked_asset', 'notes', 'created_at', 'created_by']
+    list_filter = ['created_at']
+    search_fields = ['asset__asset_id', 'linked_asset__asset_id', 'notes']
+    readonly_fields = ['created_at']
+

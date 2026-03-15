@@ -136,7 +136,7 @@ def export_assets_excel(assets):
             asset.model_description,
             asset.purchase_date.strftime('%d/%m/%Y') if asset.purchase_date else '',
             asset.serial_number,
-            asset.assigned_to.full_name if asset.assigned_to else '',
+            asset.assigned_to.full_name if asset.assigned_to else (asset.department.name + ' (Dept)' if asset.department else ''),
             asset.last_known_person.full_name if asset.last_known_person else '',
             asset.status.name if asset.status else '',
             asset.admin_comments,

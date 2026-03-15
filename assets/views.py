@@ -5,8 +5,9 @@ from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.http import require_http_methods
-from .models import Asset, Category, StatusOption, Department
+from django.views.decorators.http import require_http_methods, require_POST
+from django.utils import timezone
+from .models import Asset, Category, StatusOption, Department, AssignmentHistory
 from .utils import export_assets_excel
 from users.decorators import role_required
 
@@ -98,15 +99,57 @@ def asset_detail(request, pk):
     
     # Get activity logs
     activity_logs = asset.activity_logs.all().order_by('-timestamp')[:20]
+
+    # Get linked assets
+    linked_assets = asset.get_linked_assets()
+    all_assets_for_linking = Asset.objects.filter(is_deleted=False).exclude(pk=pk).order_by('asset_id')
     
     context = {
         'asset': asset,
         'assignment_history': assignment_history,
         'maintenance_logs': maintenance_logs,
         'activity_logs': activity_logs,
+        'linked_assets': linked_assets,
+        'all_assets_for_linking': all_assets_for_linking,
     }
     
     return render(request, 'assets/detail.html', context)
+
+
+def _track_assignment_change(asset, old_person_id, old_department_id):
+    """
+    Helper to create/close AssignmentHistory records when assigned_to changes.
+    Called from asset_create and asset_update.
+    """
+    now = timezone.now()
+    new_person_id = asset.assigned_to_id
+    new_department_id = asset.department_id
+
+    # If person or department changed, close the old open record(s)
+    if old_person_id != new_person_id or old_department_id != new_department_id:
+        open_records = AssignmentHistory.objects.filter(
+            asset=asset, end_date__isnull=True
+        )
+        open_records.update(end_date=now)
+
+        # If old person existed, update last_known_person
+        if old_person_id and old_person_id != new_person_id:
+            from .models import Person
+            try:
+                old_person = Person.objects.get(pk=old_person_id)
+                asset.last_known_person = old_person
+                asset.save(update_fields=['last_known_person'])
+            except Person.DoesNotExist:
+                pass
+
+        # Create new record if there's a new assignment
+        if new_person_id or new_department_id:
+            AssignmentHistory.objects.create(
+                asset=asset,
+                person_id=new_person_id,
+                department_id=new_department_id,
+                start_date=now,
+            )
 
 
 @login_required
@@ -146,6 +189,9 @@ def asset_create(request):
                         messages.error(request, err)
                 return render(request, 'assets/form.html', {'form': form, 'title': 'Create Asset'})
             
+            # Track initial assignment
+            _track_assignment_change(asset, None, None)
+
             messages.success(request, f'Asset {asset.asset_id} created successfully!')
             return redirect('assets:detail', pk=asset.pk)
         else:
@@ -168,6 +214,10 @@ def asset_update(request, pk):
     asset = get_object_or_404(Asset, pk=pk, is_deleted=False)
     
     if request.method == 'POST':
+        # Capture old assignment before saving
+        old_person_id = asset.assigned_to_id
+        old_department_id = asset.department_id
+
         form = AssetForm(request.POST, request.FILES, instance=asset)
         if form.is_valid():
             asset = form.save(commit=False)
@@ -180,6 +230,9 @@ def asset_update(request, pk):
                         messages.error(request, err)
                 return render(request, 'assets/form.html', {'form': form, 'title': 'Update Asset', 'asset': asset})
             
+            # Track assignment change (auto previous owner)
+            _track_assignment_change(asset, old_person_id, old_department_id)
+
             messages.success(request, f'Asset {asset.asset_id} updated successfully!')
             return redirect('assets:detail', pk=asset.pk)
         else:
@@ -191,7 +244,14 @@ def asset_update(request, pk):
     else:
         form = AssetForm(instance=asset)
     
-    return render(request, 'assets/form.html', {'form': form, 'title': 'Update Asset', 'asset': asset})
+    # Pass assignment history for the "Previous Owners" section
+    assignment_history = asset.assignment_history.select_related('person', 'department').order_by('-start_date')
+    return render(request, 'assets/form.html', {
+        'form': form,
+        'title': 'Update Asset',
+        'asset': asset,
+        'assignment_history': assignment_history,
+    })
 
 
 @login_required
@@ -208,6 +268,16 @@ def asset_delete(request, pk):
         return redirect('assets:list')
     
     return render(request, 'assets/delete_confirm.html', {'asset': asset})
+
+
+@login_required
+@role_required(['super_admin', 'admin'])
+@require_POST
+def delete_assignment_history(request, pk):
+    """AJAX endpoint to delete an assignment history record"""
+    record = get_object_or_404(AssignmentHistory, pk=pk)
+    record.delete()
+    return JsonResponse({'success': True})
 
 
 @login_required
@@ -245,3 +315,62 @@ def get_next_asset_id(request):
     next_id = f"{category.short_code}-{next_num:03d}"
     
     return JsonResponse({'asset_id': next_id})
+
+
+@login_required
+@role_required(['super_admin', 'admin'])
+@require_POST
+def asset_link(request, pk):
+    """Link two assets together"""
+    from .models import AssetLink
+    asset = get_object_or_404(Asset, pk=pk, is_deleted=False)
+    linked_asset_id = request.POST.get('linked_asset_id')
+    notes = request.POST.get('notes', '')
+
+    if not linked_asset_id:
+        messages.error(request, 'Please select an asset to link.')
+        return redirect('assets:detail', pk=pk)
+
+    linked_asset = get_object_or_404(Asset, pk=linked_asset_id, is_deleted=False)
+
+    if asset.pk == linked_asset.pk:
+        messages.error(request, 'Cannot link an asset to itself.')
+        return redirect('assets:detail', pk=pk)
+
+    # Create bidirectional links
+    link1, created1 = AssetLink.objects.get_or_create(
+        asset=asset, linked_asset=linked_asset,
+        defaults={'notes': notes, 'created_by': request.user}
+    )
+    link2, created2 = AssetLink.objects.get_or_create(
+        asset=linked_asset, linked_asset=asset,
+        defaults={'notes': notes, 'created_by': request.user}
+    )
+
+    if created1 or created2:
+        messages.success(request, f'Linked {asset.asset_id} ↔ {linked_asset.asset_id}')
+    else:
+        messages.info(request, 'These assets are already linked.')
+
+    return redirect('assets:detail', pk=pk)
+
+
+@login_required
+@role_required(['super_admin', 'admin'])
+@require_POST
+def asset_unlink(request, pk, link_pk):
+    """Remove a link between two assets"""
+    from .models import AssetLink
+    asset = get_object_or_404(Asset, pk=pk, is_deleted=False)
+    link = get_object_or_404(AssetLink, pk=link_pk, asset=asset)
+
+    # Remove both directions
+    reverse_link = AssetLink.objects.filter(
+        asset=link.linked_asset, linked_asset=asset
+    )
+    reverse_link.delete()
+    linked_id = link.linked_asset.asset_id
+    link.delete()
+
+    messages.success(request, f'Unlinked {asset.asset_id} ↔ {linked_id}')
+    return redirect('assets:detail', pk=pk)

@@ -184,6 +184,12 @@ class Asset(models.Model):
     def __str__(self):
         return f"{self.asset_id} - {self.model_description}"
 
+    def get_linked_assets(self):
+        """Return all assets linked to this one (via AssetLink)."""
+        return AssetLink.objects.filter(asset=self).select_related(
+            'linked_asset', 'linked_asset__category', 'linked_asset__status'
+        )
+
 
 class AssignmentHistory(models.Model):
     """Track asset assignment history"""
@@ -240,3 +246,28 @@ class ActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.action} - {self.asset.asset_id if self.asset else 'N/A'} - {self.timestamp}"
+
+
+class AssetLink(models.Model):
+    """Link two assets together (e.g. laptop ↔ charger)"""
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='links_from')
+    linked_asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='links_to')
+    notes = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['asset', 'linked_asset'],
+                name='unique_asset_link'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['asset']),
+            models.Index(fields=['linked_asset']),
+        ]
+
+    def __str__(self):
+        return f"{self.asset.asset_id} ↔ {self.linked_asset.asset_id}"
+

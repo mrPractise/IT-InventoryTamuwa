@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Task: {{ task.title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-check2-square"></i> Task Details</span>
+                <a href="{% url 'tasks:list' %}" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-left me-1"></i>Back to Tasks
+                </a>
+            </div>
+            <div class="card-body">
+                <h5 class="mb-3">{{ task.title }}</h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Priority:</strong><br>
+                        <span class="badge bg-{% if task.priority == 'Critical' %}danger{% elif task.priority == 'High' %}warning text-dark{% elif task.priority == 'Medium' %}info{% else %}secondary{% endif %}">
+                            {{ task.priority }}
+                        </span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Status:</strong><br>
+                        <span class="badge bg-{% if task.status == 'Done' %}success{% elif task.status == 'In Progress' %}primary{% else %}secondary{% endif %}">
+                            {{ task.status }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Due Date:</strong><br>
+                        {% if task.due_date %}
+                            <span class="{% if task.is_overdue %}text-danger fw-bold{% endif %}">
+                                {{ task.due_date|date:"d/m/Y H:i" }}
+                            </span>
+                            {% if task.is_overdue %}
+                            <span class="badge bg-danger ms-1">Overdue</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">No due date</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Assigned To:</strong><br>
+                        {{ task.assigned_to.username|default:"Unassigned" }}
+                    </div>
+                </div>
+
+                {% if task.description %}
+                <div class="mb-3">
+                    <strong>Description:</strong><br>
+                    <p class="text-muted">{{ task.description|linebreaks }}</p>
+                </div>
+                {% endif %}
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <small class="text-muted">Created by {{ task.created_by.username|default:"—" }} on {{ task.created_at|date:"d/m/Y H:i" }}</small>
+                    </div>
+                    <div class="col-md-6">
+                        <small class="text-muted">Last updated: {{ task.updated_at|date:"d/m/Y H:i" }}</small>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <a href="{% url 'tasks:update' task.pk %}" class="btn btn-warning">
+                        <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    <a href="{% url 'tasks:delete' task.pk %}" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i> Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -20,6 +20,7 @@ def notifications_count(request):
         from requisition.models import Requisition
         from assets.models import Asset
         from maintenance.models import MaintenanceLog
+        from tasks.models import Task
 
         today = timezone.now().date()
         week_ago = today - timedelta(days=7)
@@ -49,6 +50,12 @@ def notifications_count(request):
         count += MaintenanceLog.objects.filter(
             maintenance_status='Open',
             date_reported__lte=fourteen_ago
+        ).count()
+
+        # Overdue tasks
+        count += Task.objects.filter(
+            status__in=['To Do', 'In Progress'],
+            due_date__lt=timezone.now()
         ).count()
 
     except Exception:

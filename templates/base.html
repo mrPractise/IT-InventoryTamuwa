@@ -286,6 +286,12 @@
                 </a>
             </li>
             <li>
+                <a href="{% url 'tasks:list' %}"
+                    class="{% if request.resolver_match.app_name == 'tasks' %}active{% endif %}">
+                    <i class="bi bi-check2-square"></i> Tasks
+                </a>
+            </li>
+            <li>
                 <a href="{% url 'users:directory' %}"
                     class="{% if request.resolver_match.url_name == 'directory' or request.resolver_match.url_name == 'user_assets' or request.resolver_match.url_name == 'department_assets' %}active{% endif %}">
                     <i class="bi bi-people-fill"></i> People &amp; Depts

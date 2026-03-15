@@ -71,7 +71,8 @@ INSTALLED_APPS = [
     # API
     'api.apps.ApiConfig',
 
-    
+    # Tasks
+    'tasks.apps.TasksConfig',
 ]
 
 

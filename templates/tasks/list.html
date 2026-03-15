@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Tasks{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-check2-square"></i> Tasks</span>
+        <a href="{% url 'tasks:create' %}" class="btn btn-sm btn-light">
+            <i class="bi bi-plus-circle me-1"></i>New Task
+        </a>
+    </div>
+    <div class="card-body">
+        <!-- Filters -->
+        <form method="get" class="row g-2 mb-3">
+            <div class="col-md-3">
+                <input type="text" name="search" class="form-control form-control-sm"
+                       placeholder="Search tasks..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Status</option>
+                    <option value="To Do" {% if status_filter == 'To Do' %}selected{% endif %}>To Do</option>
+                    <option value="In Progress" {% if status_filter == 'In Progress' %}selected{% endif %}>In Progress</option>
+                    <option value="Done" {% if status_filter == 'Done' %}selected{% endif %}>Done</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="priority" class="form-select form-select-sm">
+                    <option value="">All Priority</option>
+                    <option value="Low" {% if priority_filter == 'Low' %}selected{% endif %}>Low</option>
+                    <option value="Medium" {% if priority_filter == 'Medium' %}selected{% endif %}>Medium</option>
+                    <option value="High" {% if priority_filter == 'High' %}selected{% endif %}>High</option>
+                    <option value="Critical" {% if priority_filter == 'Critical' %}selected{% endif %}>Critical</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-sm btn-primary w-100">
+                    <i class="bi bi-funnel me-1"></i>Filter
+                </button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Due Date</th>
+                        <th>Assigned To</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in page_obj %}
+                    <tr class="{% if task.is_overdue %}table-danger{% endif %}">
+                        <td>
+                            <a href="{% url 'tasks:detail' task.pk %}" class="text-decoration-none fw-semibold">
+                                {{ task.title }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if task.priority == 'Critical' %}danger{% elif task.priority == 'High' %}warning text-dark{% elif task.priority == 'Medium' %}info{% else %}secondary{% endif %}">
+                                {{ task.priority }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if task.status == 'Done' %}success{% elif task.status == 'In Progress' %}primary{% else %}secondary{% endif %}">
+                                {{ task.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if task.due_date %}
+                                <span class="{% if task.is_overdue %}text-danger fw-bold{% endif %}">
+                                    {{ task.due_date|date:"d/m/Y H:i" }}
+                                </span>
+                                {% if task.is_overdue %}<i class="bi bi-exclamation-triangle-fill text-danger ms-1"></i>{% endif %}
+                            {% else %}
+                                <span class="text-muted">No due date</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ task.assigned_to.username|default:"Unassigned" }}</td>
+                        <td>{{ task.created_at|date:"d/m/Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-check2-square fs-1 d-block mb-2"></i>
+                            No tasks found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}&priority={{ priority_filter }}&search={{ search_query }}">&laquo;</a>
+                </li>
+                {% endif %}
+                {% for i in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == i %}active{% endif %}">
+                    <a class="page-link" href="?page={{ i }}&status={{ status_filter }}&priority={{ priority_filter }}&search={{ search_query }}">{{ i }}</a>
+                </li>
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}&priority={{ priority_filter }}&search={{ search_query }}">&raquo;</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
