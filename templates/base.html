@@ -239,7 +239,7 @@
             </li>
             <li>
                 <a href="{% url 'assets:list' %}"
-                    class="{% if request.resolver_match.app_name == 'assets' and request.resolver_match.url_name not in 'create,links_list' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'assets' and request.resolver_match.url_name == 'list' %}active{% endif %}">
                     <i class="bi bi-box"></i> Assets
                 </a>
             </li>
@@ -257,7 +257,7 @@
             </li>
             <li>
                 <a href="{% url 'requisition:list' %}"
-                    class="{% if request.resolver_match.app_name == 'requisition' and request.resolver_match.url_name in 'list,detail,create' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'requisition' and request.resolver_match.url_name == 'list' %}active{% endif %}">
                     <i class="bi bi-receipt"></i> Requisitions
                 </a>
             </li>
@@ -287,7 +287,7 @@
             </li>
             <li>
                 <a href="{% url 'issues:issue_list' %}"
-                    class="{% if request.resolver_match.app_name == 'issues' and 'project' not in request.resolver_match.url_name %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'issues' and request.resolver_match.url_name == 'issue_list' or request.resolver_match.url_name == 'issue_detail' %}active{% endif %}">
                     <i class="bi bi-bug"></i> Issues
                 </a>
             </li>
