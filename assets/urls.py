@@ -14,5 +14,7 @@ urlpatterns = [
     path('assignment-history/<int:pk>/delete/', views.delete_assignment_history, name='delete_assignment_history'),
     path('<int:pk>/link/', views.asset_link, name='asset_link'),
     path('<int:pk>/unlink/<int:link_pk>/', views.asset_unlink, name='asset_unlink'),
+    path('links/', views.asset_links_list, name='links_list'),
+    path('quantities/', views.asset_quantities, name='quantities'),
 ]
 

@@ -204,6 +204,96 @@ def edit_department_view(request, dept_id):
     return render(request, 'users/add_department.html', {'form': form, 'title': 'Edit Department', 'editing': True, 'obj': dept})
 
 
+@login_required
+@user_passes_test(lambda u: u.is_superuser or (hasattr(u, 'profile') and u.profile.is_admin()))
+def delete_person_view(request, person_id):
+    """Delete a person and make their assigned assets available."""
+    from assets.models import StatusOption, AssignmentHistory
+    person = get_object_or_404(Person, id=person_id)
+    
+    if request.method == 'POST':
+        # Get assets assigned to this person
+        assigned_assets = Asset.objects.filter(assigned_to=person, is_deleted=False)
+        
+        # Get "Available" status
+        available_status = StatusOption.objects.filter(name='Available').first()
+        
+        # Update assets to available and close assignment history
+        with transaction.atomic():
+            for asset in assigned_assets:
+                # Close any open assignment history records
+                AssignmentHistory.objects.filter(
+                    asset=asset, 
+                    end_date__isnull=True
+                ).update(end_date=timezone.now())
+                
+                # Set asset to available and unassign
+                asset.assigned_to = None
+                if available_status:
+                    asset.status = available_status
+                asset.save()
+            
+            # Delete the person
+            person.delete()
+        
+        messages.success(request, f"Person '{person.full_name}' deleted successfully. {assigned_assets.count()} asset(s) set to Available.")
+        return redirect('users:directory')
+    
+    # GET request - show confirmation
+    assigned_assets = Asset.objects.filter(assigned_to=person, is_deleted=False)
+    return render(request, 'users/delete_person_confirm.html', {
+        'person': person,
+        'assigned_assets': assigned_assets,
+    })
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser or (hasattr(u, 'profile') and u.profile.is_admin()))
+def delete_department_view(request, dept_id):
+    """Delete a department and make their assets available."""
+    from assets.models import StatusOption, AssignmentHistory
+    dept = get_object_or_404(Department, pk=dept_id)
+    
+    if request.method == 'POST':
+        # Get assets assigned to this department
+        dept_assets = Asset.objects.filter(department=dept, is_deleted=False)
+        
+        # Get "Available" status
+        available_status = StatusOption.objects.filter(name='Available').first()
+        
+        # Update assets to available
+        with transaction.atomic():
+            for asset in dept_assets:
+                # Close any open assignment history records for this department
+                AssignmentHistory.objects.filter(
+                    asset=asset, 
+                    department=dept,
+                    end_date__isnull=True
+                ).update(end_date=timezone.now())
+                
+                # Remove department assignment
+                asset.department = None
+                # Only set to available if not assigned to a person
+                if not asset.assigned_to and available_status:
+                    asset.status = available_status
+                asset.save()
+            
+            # Delete the department
+            dept.delete()
+        
+        messages.success(request, f"Department '{dept.name}' deleted successfully. {dept_assets.count()} asset(s) updated.")
+        return redirect('users:directory')
+    
+    # GET request - show confirmation
+    dept_assets = Asset.objects.filter(department=dept, is_deleted=False)
+    dept_people = Person.objects.filter(department=dept)
+    return render(request, 'users/delete_department_confirm.html', {
+        'department': dept,
+        'dept_assets': dept_assets,
+        'dept_people': dept_people,
+    })
+
+
 
 @login_required
 def password_change_required_view(request):

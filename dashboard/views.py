@@ -174,7 +174,7 @@ def notifications_view(request):
         notifications.append({
             'level': 'warning',
             'icon': 'bi-tools',
-            'title': f"Long maintenance: {log.asset.asset_id} — {log.asset.name}",
+            'title': f"Long maintenance: {log.asset.asset_id} — {log.asset.model_description}",
             'message': f"Under maintenance for {age_days} days · Reported: {log.date_reported.strftime('%d %b %Y')}",
             'link': f"/maintenance/{log.pk}/",
             'link_label': 'View Log',
@@ -191,7 +191,7 @@ def notifications_view(request):
         notifications.append({
             'level': 'danger',
             'icon': 'bi-question-circle-fill',
-            'title': f"Missing Asset: {asset.asset_id} — {asset.name}",
+            'title': f"Missing Asset: {asset.asset_id} — {asset.model_description}",
             'message': f"Category: {asset.category.name if asset.category else 'N/A'}",
             'link': f"/assets/{asset.pk}/",
             'link_label': 'View Asset',

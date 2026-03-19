@@ -374,3 +374,82 @@ def asset_unlink(request, pk, link_pk):
 
     messages.success(request, f'Unlinked {asset.asset_id} ↔ {linked_id}')
     return redirect('assets:detail', pk=pk)
+
+
+@login_required
+def asset_links_list(request):
+    """View all asset links with their assigned people/departments and status."""
+    from .models import AssetLink
+    
+    # Get all links with related data
+    links = AssetLink.objects.filter(
+        asset__is_deleted=False,
+        linked_asset__is_deleted=False
+    ).select_related(
+        'asset', 'linked_asset',
+        'asset__category', 'linked_asset__category',
+        'asset__status', 'linked_asset__status',
+        'asset__assigned_to', 'linked_asset__assigned_to',
+        'asset__department', 'linked_asset__department'
+    ).order_by('asset__asset_id')
+
+    # Group links by primary asset
+    linked_groups = {}
+    for link in links:
+        if link.asset_id not in linked_groups:
+            linked_groups[link.asset_id] = {
+                'primary_asset': link.asset,
+                'linked_assets': []
+            }
+        linked_groups[link.asset_id]['linked_assets'].append(link)
+
+    context = {
+        'links': links,
+        'linked_groups': linked_groups,
+    }
+    return render(request, 'assets/links_list.html', context)
+
+
+@login_required
+def asset_quantities(request):
+    """View showing asset quantities by category and status (similar to Excel Quantities sheet)."""
+    from django.db.models import Count, Q
+    
+    categories = Category.objects.all().order_by('name')
+    statuses = StatusOption.objects.filter(is_active=True).order_by('name')
+    
+    status_names = ['In Use', 'Available', 'Under Maintenance', 'Missing', 'Retired']
+    # Template-friendly keys (no spaces)
+    status_keys = ['In_Use', 'Available', 'Under_Maintenance', 'Missing', 'Retired']
+    
+    # Build quantities data
+    quantities_data = []
+    grand_totals = {key: 0 for key in status_keys}
+    grand_total = 0
+    
+    for category in categories:
+        row = {
+            'category': category,
+            'counts': {},
+            'total': 0
+        }
+        for status_name, status_key in zip(status_names, status_keys):
+            count = Asset.objects.filter(
+                category=category,
+                status__name=status_name,
+                is_deleted=False
+            ).count()
+            row['counts'][status_key] = count
+            row['total'] += count
+            grand_totals[status_key] += count
+            grand_total += count
+        quantities_data.append(row)
+    
+    context = {
+        'quantities_data': quantities_data,
+        'status_names': status_names,
+        'status_keys': status_keys,
+        'grand_totals': grand_totals,
+        'grand_total': grand_total,
+    }
+    return render(request, 'assets/quantities.html', context)

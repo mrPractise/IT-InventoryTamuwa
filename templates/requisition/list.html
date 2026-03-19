@@ -34,12 +34,36 @@
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Req No.</th>
-                        <th>Title</th>
-                        <th>Status</th>
-                        <th>Total</th>
-                        <th>Created By</th>
-                        <th>Date</th>
+                        <th>
+                            <a href="?sort=req_no&amp;dir={% if sort_by == 'req_no' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;status={{ status_filter }}" class="text-dark text-decoration-none">
+                                Req No. {% if sort_by == 'req_no' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort=title&amp;dir={% if sort_by == 'title' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;status={{ status_filter }}" class="text-dark text-decoration-none">
+                                Title {% if sort_by == 'title' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort=status&amp;dir={% if sort_by == 'status' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;status={{ status_filter }}" class="text-dark text-decoration-none">
+                                Status {% if sort_by == 'status' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort=total&amp;dir={% if sort_by == 'total' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;status={{ status_filter }}" class="text-dark text-decoration-none">
+                                Total {% if sort_by == 'total' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort=created_by&amp;dir={% if sort_by == 'created_by' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;status={{ status_filter }}" class="text-dark text-decoration-none">
+                                Created By {% if sort_by == 'created_by' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="?sort=date&amp;dir={% if sort_by == 'date' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}&amp;status={{ status_filter }}" class="text-dark text-decoration-none">
+                                Date {% if sort_by == 'date' %}{% if sort_dir == 'asc' %}<i class="bi bi-sort-up-alt"></i>{% else %}<i class="bi bi-sort-down-alt"></i>{% endif %}{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}
+                            </a>
+                        </th>
                         <th>Actions</th>
                     </tr>
                 </thead>

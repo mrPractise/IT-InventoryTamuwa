@@ -239,8 +239,20 @@
             </li>
             <li>
                 <a href="{% url 'assets:list' %}"
-                    class="{% if request.resolver_match.app_name == 'assets' and request.resolver_match.url_name != 'create' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'assets' and request.resolver_match.url_name not in 'create,links_list' %}active{% endif %}">
                     <i class="bi bi-box"></i> Assets
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'assets:links_list' %}"
+                    class="{% if request.resolver_match.url_name == 'links_list' %}active{% endif %}">
+                    <i class="bi bi-link-45deg"></i> Asset Links
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'assets:quantities' %}"
+                    class="{% if request.resolver_match.url_name == 'quantities' %}active{% endif %}">
+                    <i class="bi bi-bar-chart"></i> Quantities
                 </a>
             </li>
             <li>
@@ -692,6 +704,41 @@
                 // Ensure input doesn't overlap the toggle button
                 input.style.paddingRight = '2.5rem';
             });
+        });
+
+        // ============================================
+        // SIDEBAR ACTIVE STATE PERSISTENCE
+        // ============================================
+        
+        // Store the active sidebar item when clicked
+        document.querySelectorAll('.sidebar-menu a').forEach(function(link) {
+            link.addEventListener('click', function() {
+                const href = this.getAttribute('href');
+                if (href && href !== '#' && !href.startsWith('javascript:')) {
+                    sessionStorage.setItem('ictcore_active_sidebar', href);
+                }
+            });
+        });
+
+        // Restore active state on page load (for back navigation)
+        document.addEventListener('DOMContentLoaded', function() {
+            const storedActive = sessionStorage.getItem('ictcore_active_sidebar');
+            if (storedActive) {
+                const currentPath = window.location.pathname;
+                const currentSearch = window.location.search;
+                const currentUrl = currentPath + currentSearch;
+                
+                // Check if we're on the same page as stored
+                if (storedActive.startsWith(currentPath)) {
+                    document.querySelectorAll('.sidebar-menu a').forEach(function(link) {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === storedActive || 
+                            link.getAttribute('href').startsWith(currentPath)) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            }
         });
     </script>
 

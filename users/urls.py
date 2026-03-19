@@ -23,7 +23,9 @@ urlpatterns = [
     path('directory/person/<int:person_id>/', views.person_assets_view, name='person_assets'),
     path('directory/add-person/', views.add_person_view, name='add_person'),
     path('directory/person/<int:person_id>/edit/', views.edit_person_view, name='edit_person'),
+    path('directory/person/<int:person_id>/delete/', views.delete_person_view, name='delete_person'),
     path('directory/department/<int:dept_id>/', views.department_assets_view, name='department_assets'),
     path('directory/add-department/', views.add_department_view, name='add_department'),
     path('directory/department/<int:dept_id>/edit/', views.edit_department_view, name='edit_department'),
+    path('directory/department/<int:dept_id>/delete/', views.delete_department_view, name='delete_department'),
 ]

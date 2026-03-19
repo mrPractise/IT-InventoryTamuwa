@@ -40,7 +40,7 @@
                 <div>
                     <h6 class="text-muted mb-1">Items Bought</h6>
                     <h2 class="mb-0 text-info">{{ total_items_bought }}</h2>
-                    <small class="text-muted">KES {{ total_value_bought|floatformat:0 }}</small>
+                    <small class="text-muted">KES {{ total_value_bought|floatformat:0|intcomma }}</small>
                 </div>
                 <div class="stat-icon text-info">
                     <i class="bi bi-cart-check"></i>

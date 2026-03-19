@@ -76,14 +76,14 @@
                                 <tr>
                                     <td><span class="badge bg-{% if item.item_type == 'Asset' %}primary{% else %}info text-dark{% endif %} bg-opacity-75">{{ item.item_type }}</span></td>
                                     <td>{{ item.item_name }}</td>
-                                    <td class="text-end">KES {{ item.unit_price|floatformat:2 }}</td>
+                                    <td class="text-end">KES {{ item.unit_price|floatformat:2|intcomma }}</td>
                                     <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-end fw-semibold">KES {{ item.total_price|floatformat:2 }}</td>
+                                    <td class="text-end fw-semibold">KES {{ item.total_price|floatformat:2|intcomma }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot class="table-light">
-                                <tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td class="text-end fw-bold text-success">KES {{ total_cost|floatformat:2 }}</td></tr>
+                                <tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td class="text-end fw-bold text-success">KES {{ total_cost|floatformat:2|intcomma }}</td></tr>
                             </tfoot>
                         </table>
                     </div>
@@ -98,41 +98,6 @@
                 {% endif %}
             </div>
         </div>
-
-        <!-- Asset Availability Card -->
-        {% if category_counts %}
-        <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-box me-2"></i>Asset Availability by Category</div>
-            <div class="card-body p-0">
-                {% for item in category_counts %}
-                <div class="p-3 border-bottom">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>{{ item.category.name }}</strong>
-                        <span class="badge bg-{% if item.available_count > 0 %}success{% else %}danger{% endif %}">
-                            {{ item.available_count }} available
-                        </span>
-                    </div>
-                    {% if item.assets %}
-                    <div class="table-responsive">
-                        <table class="table table-xs table-sm mb-0" style="font-size:0.82rem;">
-                            <thead class="table-light"><tr><th>Asset ID</th><th>Status</th><th>Location</th></tr></thead>
-                            <tbody>
-                                {% for a in item.assets %}
-                                <tr>
-                                    <td><a href="{% url 'assets:detail' a.pk %}">{{ a.asset_id }}</a></td>
-                                    <td><span class="badge bg-{% if a.status.name == 'Available' %}success{% elif a.status.name == 'Under Maintenance' %}warning text-dark{% elif a.status.name == 'In Use' %}primary{% else %}secondary{% endif %} bg-opacity-75">{{ a.status.name }}</span></td>
-                                    <td class="text-muted">{{ a.assigned_to|default:a.department|default:"—" }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
 
         <!-- Linked Requisitions (tagged from Requisitions side) -->
         {% with reqs=project.requisitions.all %}
@@ -200,7 +165,6 @@
                     <span class="badge ms-1 bg-{% if project.status == 'Done' %}success{% elif project.status == 'Rejected' %}danger{% else %}secondary{% endif %}">{{ project.status }}</span>
                 </div>
                 <div class="mb-2"><span class="text-muted">Priority:</span> <strong>{{ project.priority }}</strong></div>
-                <div class="mb-2"><span class="text-muted">Categories:</span> {{ project.categories.count }}</div>
                 <div class="mb-2"><span class="text-muted">Requisitions:</span> {{ project.requisitions.count }}</div>
                 <div class="mb-2"><span class="text-muted">Comments:</span> {{ comments|length }}</div>
                 <div class="mb-2"><span class="text-muted">Created:</span> {{ project.created_at|date:"d/m/Y" }}</div>

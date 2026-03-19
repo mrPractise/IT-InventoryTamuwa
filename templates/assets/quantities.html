@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Asset Quantities{% endblock %}
+
+{% block extra_css %}
+<style>
+    .qty-table th, .qty-table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+    .qty-table th:first-child, .qty-table td:first-child {
+        text-align: left;
+    }
+    .qty-table .category-name {
+        font-weight: 600;
+    }
+    .qty-table .total-row {
+        background: #e9ecef;
+        font-weight: 700;
+    }
+    .qty-badge {
+        display: inline-block;
+        min-width: 40px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .qty-in-use { background: #d4edda; color: #155724; }
+    .qty-available { background: #d1ecf1; color: #0c5460; }
+    .qty-maintenance { background: #fff3cd; color: #856404; }
+    .qty-missing { background: #f8d7da; color: #721c24; }
+    .qty-retired { background: #e2e3e5; color: #383d41; }
+    .qty-total { background: #cfe2ff; color: #084298; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-bar-chart me-2"></i>Asset Quantities by Category & Status</span>
+        <div>
+            <a href="{% url 'assets:export_excel' %}" class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if quantities_data %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover qty-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Asset Category</th>
+                        <th>In Use</th>
+                        <th>Available</th>
+                        <th>Under Maintenance</th>
+                        <th>Missing</th>
+                        <th>Retired</th>
+                        <th>Grand Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in quantities_data %}
+                    <tr>
+                        <td class="category-name">{{ row.category.name }}</td>
+                        <td>
+                            {% if row.counts.In Use > 0 %}
+                            <span class="qty-badge qty-in-use">{{ row.counts.In Use }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.counts.Available > 0 %}
+                            <span class="qty-badge qty-available">{{ row.counts.Available }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.counts.Under_Maintenance > 0 %}
+                            <span class="qty-badge qty-maintenance">{{ row.counts.Under_Maintenance }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.counts.Missing > 0 %}
+                            <span class="qty-badge qty-missing">{{ row.counts.Missing }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.counts.Retired > 0 %}
+                            <span class="qty-badge qty-retired">{{ row.counts.Retired }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.total > 0 %}
+                            <span class="qty-badge qty-total">{{ row.total }}</span>
+                            {% else %}
+                            <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">No categories found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-secondary total-row">
+                    <tr>
+                        <td>TOTAL</td>
+                        <td>{{ grand_totals.In Use }}</td>
+                        <td>{{ grand_totals.Available }}</td>
+                        <td>{{ grand_totals.Under_Maintenance }}</td>
+                        <td>{{ grand_totals.Missing }}</td>
+                        <td>{{ grand_totals.Retired }}</td>
+                        <td>{{ grand_total }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-bar-chart text-muted display-1"></i>
+            <h5 class="mt-3">No Data</h5>
+            <p class="text-muted">No asset categories or assets found.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

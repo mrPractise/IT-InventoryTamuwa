@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block page_title %}Delete Department{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <i class="bi bi-exclamation-triangle me-2"></i>Confirm Delete Department
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <i class="bi bi-info-circle me-2"></i>
+            You are about to delete department <strong>{{ department.name }}</strong>.
+            {% if dept_assets %}
+            This department has <strong>{{ dept_assets.count }} asset(s)</strong>.
+            These assets will have their department assignment removed.
+            {% endif %}
+            {% if dept_people %}
+            <br><strong>{{ dept_people.count }} person(s)</strong> are in this department and will lose their department association.
+            {% endif %}
+        </div>
+
+        {% if dept_assets %}
+        <div class="mb-4">
+            <h6>Assets in this department:</h6>
+            <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Asset ID</th>
+                            <th>Category</th>
+                            <th>Model</th>
+                            <th>Assigned To</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in dept_assets %}
+                        <tr>
+                            <td>{{ asset.asset_id }}</td>
+                            <td>{{ asset.category.name }}</td>
+                            <td>{{ asset.model_description }}</td>
+                            <td>{{ asset.assigned_to.full_name|default:"—" }}</td>
+                            <td>{{ asset.status.name }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if dept_people %}
+        <div class="mb-4">
+            <h6>People in this department:</h6>
+            <ul class="list-group">
+                {% for person in dept_people %}
+                <li class="list-group-item">{{ person.full_name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-1"></i>Yes, Delete Department
+                </button>
+                <a href="{% url 'users:department_assets' department.id %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

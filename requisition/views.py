@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
+from django.views.decorators.http import require_POST
 from .models import Requisition, RequisitionItem
 from .forms import RequisitionForm, RequisitionItemFormSet
 from users.decorators import role_required
@@ -14,6 +15,22 @@ def requisition_list(request):
     if status_filter:
         qs = qs.filter(status=status_filter)
 
+    # Sorting
+    sort_by = request.GET.get('sort', '-created_at')
+    sort_dir = request.GET.get('dir', 'desc')
+    SORT_MAP = {
+        'req_no': 'req_no',
+        'title': 'title',
+        'status': 'status',
+        'total': 'total_amount',
+        'created_by': 'created_by__username',
+        'date': 'created_at',
+    }
+    orm_field = SORT_MAP.get(sort_by, '-created_at')
+    if sort_by and sort_dir == 'desc':
+        orm_field = f'-{orm_field}'
+    qs = qs.order_by(orm_field)
+
     paginator = Paginator(qs, 20)
     page = request.GET.get('page')
     requisitions = paginator.get_page(page)
@@ -22,6 +39,8 @@ def requisition_list(request):
         'requisitions': requisitions,
         'status_filter': status_filter,
         'status_choices': Requisition.STATUS_CHOICES,
+        'sort_by': sort_by,
+        'sort_dir': sort_dir,
     })
 
 
@@ -138,7 +157,33 @@ def bought_items_queue(request):
         .order_by('-requisition__created_at', 'item_name')
     )
     
+    # Get all assets for the "Same as" dropdown
+    from assets.models import Asset
+    all_assets = Asset.objects.filter(is_deleted=False).select_related('category', 'status').order_by('asset_id')
+    
     return render(request, 'requisition/bought_items_queue.html', {
         'items': bought_items,
         'total_count': bought_items.count(),
+        'all_assets': all_assets,
     })
+
+
+@login_required
+@role_required(['super_admin', 'admin'])
+@require_POST
+def mark_item_processed(request, item_pk):
+    """Mark a requisition item as processed (linked to existing asset)."""
+    item = get_object_or_404(RequisitionItem, pk=item_pk)
+    asset_id = request.POST.get('asset_id')
+    
+    if asset_id:
+        from assets.models import Asset
+        asset = get_object_or_404(Asset, pk=asset_id, is_deleted=False)
+        item.is_processed = True
+        item.save()
+        messages.success(request, f"Item '{item.item_name}' linked to existing asset {asset.asset_id}.")
+    else:
+        messages.error(request, "Please select an asset to link.")
+        return redirect('requisition:bought_items_queue')
+    
+    return redirect('requisition:bought_items_queue')

@@ -96,9 +96,14 @@
         </div>
     </div>
     {% if user.is_superuser or user.profile.is_admin %}
-    <a href="{% url 'users:edit_person' person.id %}" class="btn btn-sm btn-light ms-auto align-self-start">
-        <i class="bi bi-pencil me-1"></i> Edit
-    </a>
+    <div class="d-flex gap-2 ms-auto align-self-start">
+        <a href="{% url 'users:edit_person' person.id %}" class="btn btn-sm btn-light">
+            <i class="bi bi-pencil me-1"></i> Edit
+        </a>
+        <a href="{% url 'users:delete_person' person.id %}" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-trash me-1"></i> Delete
+        </a>
+    </div>
     {% endif %}
 </div>
 
