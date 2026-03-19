@@ -26,7 +26,7 @@ def requisition_list(request):
         'created_by': 'created_by__username',
         'date': 'created_at',
     }
-    orm_field = SORT_MAP.get(sort_by, '-created_at')
+    orm_field = SORT_MAP.get(sort_by, 'created_at')
     if sort_by and sort_dir == 'desc':
         orm_field = f'-{orm_field}'
     qs = qs.order_by(orm_field)
