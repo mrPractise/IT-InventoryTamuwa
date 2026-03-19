@@ -65,8 +65,8 @@
                     <tr>
                         <td class="category-name">{{ row.category.name }}</td>
                         <td>
-                            {% if row.counts.In Use > 0 %}
-                            <span class="qty-badge qty-in-use">{{ row.counts.In Use }}</span>
+                            {% if row.counts.In_Use > 0 %}
+                            <span class="qty-badge qty-in-use">{{ row.counts.In_Use }}</span>
                             {% else %}
                             <span class="text-muted">0</span>
                             {% endif %}
@@ -116,7 +116,7 @@
                 <tfoot class="table-secondary total-row">
                     <tr>
                         <td>TOTAL</td>
-                        <td>{{ grand_totals.In Use }}</td>
+                        <td>{{ grand_totals.In_Use }}</td>
                         <td>{{ grand_totals.Available }}</td>
                         <td>{{ grand_totals.Under_Maintenance }}</td>
                         <td>{{ grand_totals.Missing }}</td>
