@@ -233,7 +233,7 @@
         <ul class="sidebar-menu">
             <li>
                 <a href="{% url 'dashboard:home' %}"
-                    class="{% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'dashboard' and request.resolver_match.url_name == 'home' %}active{% endif %}">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
@@ -287,7 +287,7 @@
             </li>
             <li>
                 <a href="{% url 'issues:issue_list' %}"
-                    class="{% if request.resolver_match.app_name == 'issues' and request.resolver_match.url_name == 'issue_list' or request.resolver_match.url_name == 'issue_detail' %}active{% endif %}">
+                    class="{% if request.resolver_match.app_name == 'issues' and 'issue' in request.resolver_match.url_name %}active{% endif %}">
                     <i class="bi bi-bug"></i> Issues
                 </a>
             </li>
@@ -310,7 +310,8 @@
                 </a>
             </li>
             <li>
-                <a href="{% url 'users:profile' %}">
+                <a href="{% url 'users:profile' %}"
+                    class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
                     <i class="bi bi-person-circle"></i> Profile
                 </a>
             </li>
@@ -706,40 +707,7 @@
             });
         });
 
-        // ============================================
-        // SIDEBAR ACTIVE STATE PERSISTENCE
-        // ============================================
-        
-        // Store the active sidebar item when clicked
-        document.querySelectorAll('.sidebar-menu a').forEach(function(link) {
-            link.addEventListener('click', function() {
-                const href = this.getAttribute('href');
-                if (href && href !== '#' && !href.startsWith('javascript:')) {
-                    sessionStorage.setItem('ictcore_active_sidebar', href);
-                }
-            });
-        });
 
-        // Restore active state on page load (for back navigation)
-        document.addEventListener('DOMContentLoaded', function() {
-            const storedActive = sessionStorage.getItem('ictcore_active_sidebar');
-            if (storedActive) {
-                const currentPath = window.location.pathname;
-                const currentSearch = window.location.search;
-                const currentUrl = currentPath + currentSearch;
-                
-                // Check if we're on the same page as stored
-                if (storedActive.startsWith(currentPath)) {
-                    document.querySelectorAll('.sidebar-menu a').forEach(function(link) {
-                        link.classList.remove('active');
-                        if (link.getAttribute('href') === storedActive || 
-                            link.getAttribute('href').startsWith(currentPath)) {
-                            link.classList.add('active');
-                        }
-                    });
-                }
-            }
-        });
     </script>
 
     {% block extra_js %}{% endblock %}
