@@ -112,27 +112,28 @@
         <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Assigned Assets</h5>
     </div>
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="bg-light text-muted small text-uppercase">
+        {% if asset_clusters %}
+        {% for cluster in asset_clusters %}
+        <table class="table table-hover align-middle mb-0 {% if not forloop.last %}border-bottom{% endif %}">
+            {% if cluster|length > 1 %}
+            <thead class="bg-warning bg-opacity-10 text-muted small text-uppercase">
                 <tr>
-                    <th class="ps-4">Asset ID</th>
-                    <th>Category</th>
-                    <th>Model / Description</th>
-                    <th>Serial Number</th>
-                    <th>Status</th>
-                    <th class="text-end pe-4">Actions</th>
+                    <th colspan="6" class="ps-4 py-1">
+                        <i class="bi bi-link-45deg me-1 text-warning"></i>
+                        Linked Group ({{ cluster|length }} assets)
+                    </th>
                 </tr>
             </thead>
+            {% endif %}
             <tbody>
-                {% for asset in assets %}
-                <tr>
+                {% for asset in cluster %}
+                <tr {% if cluster|length > 1 %}class="table-warning-row"{% endif %}>
                     <td class="ps-4"><span class="fw-bold text-primary">{{ asset.asset_id }}</span></td>
                     <td><span class="badge bg-light text-dark border">{{ asset.category.name }}</span></td>
                     <td>{{ asset.model_description }}</td>
                     <td class="text-muted small font-monospace">{{ asset.serial_number }}</td>
                     <td>
-                        <span
-                            class="status-chip {% if asset.status.name == 'In Use' %}chip-in-use{% elif asset.status.name == 'Available' %}chip-available{% elif asset.status.name == 'Under Maintenance' %}chip-maintenance{% else %}bg-light text-dark{% endif %}">
+                        <span class="status-chip {% if asset.status.name == 'In Use' %}chip-in-use{% elif asset.status.name == 'Available' %}chip-available{% elif asset.status.name == 'Under Maintenance' %}chip-maintenance{% else %}bg-light text-dark{% endif %}">
                             {{ asset.status.name }}
                         </span>
                     </td>
@@ -142,16 +143,22 @@
                         </a>
                     </td>
                 </tr>
-                {% empty %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endfor %}
+        {% else %}
+        <table class="table align-middle mb-0">
+            <tbody>
                 <tr>
                     <td colspan="6" class="text-center py-5 text-muted">
                         <i class="bi bi-inbox display-4 d-block mb-3 opacity-25"></i>
                         No assets assigned to this person.
                     </td>
                 </tr>
-                {% endfor %}
             </tbody>
         </table>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

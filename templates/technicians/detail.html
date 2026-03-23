@@ -175,7 +175,7 @@
                                 </td>
                                 <td>
                                     {% if service.typical_cost %}
-                                    KES {{ service.typical_cost|floatformat:2|intcomma }}
+                                    {{ service.typical_cost|floatformat:0|intcomma }}
                                     {% else %}
                                     -
                                     {% endif %}

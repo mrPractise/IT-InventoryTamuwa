@@ -81,13 +81,39 @@ def directory_view(request):
 
 @login_required
 def person_assets_view(request, person_id):
-    """View to show assets assigned to a specific person."""
+    """View to show assets assigned to a specific person, with linked assets grouped."""
+    from assets.models import AssetLink
     person = get_object_or_404(Person, id=person_id)
-    assets = Asset.objects.filter(assigned_to=person, is_deleted=False).select_related('category', 'status')
-    
+    assets = list(Asset.objects.filter(assigned_to=person, is_deleted=False).select_related('category', 'status'))
+
+    # Build linked clusters using union-find so linked assets appear grouped
+    asset_pks = {a.pk for a in assets}
+    # Fetch all links among these assets
+    links = AssetLink.objects.filter(asset__in=asset_pks, linked_asset__in=asset_pks)
+    parent = {a.pk: a.pk for a in assets}
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    def union(x, y):
+        px, py = find(x), find(y)
+        if px != py:
+            parent[px] = py
+    for lnk in links:
+        if lnk.asset_id in parent and lnk.linked_asset_id in parent:
+            union(lnk.asset_id, lnk.linked_asset_id)
+    # Group assets by their cluster root
+    from collections import defaultdict
+    clusters = defaultdict(list)
+    for a in assets:
+        clusters[find(a.pk)].append(a)
+    asset_clusters = list(clusters.values())
+
     context = {
         'person': person,
         'assets': assets,
+        'asset_clusters': asset_clusters,
         'view_type': 'person',
     }
     return render(request, 'users/assigned_assets.html', context)
@@ -95,11 +121,34 @@ def person_assets_view(request, person_id):
 
 @login_required
 def department_assets_view(request, dept_id):
-    """Show all assets belonging to a specific department."""
+    """Show all assets belonging to a specific department, with linked assets grouped."""
+    from assets.models import AssetLink
     department = get_object_or_404(Department, pk=dept_id)
-    assets = Asset.objects.filter(
+    assets = list(Asset.objects.filter(
         department=department, is_deleted=False
-    ).select_related('category', 'status', 'assigned_to').order_by('asset_id')
+    ).select_related('category', 'status', 'assigned_to').order_by('asset_id'))
+
+    # Build linked clusters using union-find
+    asset_pks = {a.pk for a in assets}
+    links = AssetLink.objects.filter(asset__in=asset_pks, linked_asset__in=asset_pks)
+    parent = {a.pk: a.pk for a in assets}
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    def union(x, y):
+        px, py = find(x), find(y)
+        if px != py:
+            parent[px] = py
+    for lnk in links:
+        if lnk.asset_id in parent and lnk.linked_asset_id in parent:
+            union(lnk.asset_id, lnk.linked_asset_id)
+    from collections import defaultdict
+    clusters = defaultdict(list)
+    for a in assets:
+        clusters[find(a.pk)].append(a)
+    asset_clusters = list(clusters.values())
 
     # Also get people in this department
     dept_people = Person.objects.filter(
@@ -114,6 +163,7 @@ def department_assets_view(request, dept_id):
     context = {
         'department': department,
         'assets': assets,
+        'asset_clusters': asset_clusters,
         'dept_people': dept_people,
         'view_type': 'department',
     }

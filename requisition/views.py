@@ -181,7 +181,9 @@ def mark_item_processed(request, item_pk):
         asset = get_object_or_404(Asset, pk=asset_id, is_deleted=False)
         item.is_processed = True
         item.save()
-        messages.success(request, f"Item '{item.item_name}' linked to existing asset {asset.asset_id}.")
+        # Automatically update the asset's requisition number
+        Asset.objects.filter(pk=asset.pk).update(requisition=item.requisition)
+        messages.success(request, f"Item '{item.item_name}' linked to existing asset {asset.asset_id}. Requisition {item.requisition.req_no} updated on the asset.")
     else:
         messages.error(request, "Please select an asset to link.")
         return redirect('requisition:bought_items_queue')

@@ -77,7 +77,7 @@
                         </td>
                         <td class="text-end">
                             {% if rec.estimated_cost %}
-                            KES {{ rec.estimated_cost|floatformat:2|intcomma }}
+                            {{ rec.estimated_cost|floatformat:0|intcomma }}
                             {% else %}
                             -
                             {% endif %}

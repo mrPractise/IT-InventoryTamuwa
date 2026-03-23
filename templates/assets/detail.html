@@ -278,25 +278,31 @@
 <!-- Link Asset Modal -->
 {% if user.profile.role == 'super_admin' or user.profile.role == 'admin' or user.is_superuser %}
 <div class="modal fade" id="linkAssetModal" tabindex="-1" aria-labelledby="linkAssetModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form method="post" action="{% url 'assets:asset_link' asset.pk %}">
                 {% csrf_token %}
                 <div class="modal-header">
                     <h5 class="modal-title" id="linkAssetModalLabel">
-                        <i class="bi bi-link-45deg me-1"></i>Link Asset to {{ asset.asset_id }}
+                        <i class="bi bi-link-45deg me-1"></i>Link Assets to {{ asset.asset_id }}
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="linked_asset_id" class="form-label">Select Asset to Link</label>
-                        <select name="linked_asset_id" id="linked_asset_id" class="form-control" required>
-                            <option value="">-- Select an asset --</option>
+                        <label for="linked_asset_id" class="form-label fw-semibold">
+                            Select Assets to Link
+                            <span class="text-muted fw-normal small">(hold Ctrl / ⌘ to select multiple)</span>
+                        </label>
+                        <select name="linked_asset_id" id="linked_asset_id" class="form-control" multiple size="8" required>
                             {% for a in all_assets_for_linking %}
-                            <option value="{{ a.pk }}">{{ a.asset_id }} — {{ a.model_description }} ({{ a.category.name }})</option>
+                            <option value="{{ a.pk }}">{{ a.asset_id }} — {{ a.model_description }} ({{ a.category.name }}){% if a.assigned_to %} · {{ a.assigned_to.full_name }}{% endif %}</option>
                             {% endfor %}
                         </select>
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Chain-link: assets already linked to your selection will also be connected automatically.
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="link_notes" class="form-label">Notes (optional)</label>

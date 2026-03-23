@@ -321,35 +321,129 @@ def get_next_asset_id(request):
 @role_required(['super_admin', 'admin'])
 @require_POST
 def asset_link(request, pk):
-    """Link two assets together"""
+    """Link one asset to multiple others, with chain-link, auto-assign, and conflict detection."""
     from .models import AssetLink
     asset = get_object_or_404(Asset, pk=pk, is_deleted=False)
-    linked_asset_id = request.POST.get('linked_asset_id')
+    # Support multi-select: getlist allows multiple values for same key
+    linked_asset_ids = request.POST.getlist('linked_asset_id') or request.POST.getlist('linked_asset_ids[]')
     notes = request.POST.get('notes', '')
 
-    if not linked_asset_id:
-        messages.error(request, 'Please select an asset to link.')
+    # Also support single-value for backwards compatibility
+    single_id = request.POST.get('linked_asset_id_single')
+    if single_id:
+        linked_asset_ids = [single_id]
+
+    if not linked_asset_ids:
+        messages.error(request, 'Please select at least one asset to link.')
         return redirect('assets:detail', pk=pk)
 
-    linked_asset = get_object_or_404(Asset, pk=linked_asset_id, is_deleted=False)
+    def get_chain(a):
+        """Get all assets in the same chain as asset a (BFS)."""
+        visited = {a.pk}
+        queue = [a]
+        while queue:
+            current = queue.pop()
+            for lnk in AssetLink.objects.filter(asset=current).select_related('linked_asset'):
+                if lnk.linked_asset_id not in visited:
+                    visited.add(lnk.linked_asset_id)
+                    queue.append(lnk.linked_asset)
+        return visited  # set of PKs
 
-    if asset.pk == linked_asset.pk:
-        messages.error(request, 'Cannot link an asset to itself.')
-        return redirect('assets:detail', pk=pk)
+    SKIP_STATUSES = {'Missing', 'Retired', 'Under Maintenance'}
 
-    # Create bidirectional links
-    link1, created1 = AssetLink.objects.get_or_create(
-        asset=asset, linked_asset=linked_asset,
-        defaults={'notes': notes, 'created_by': request.user}
-    )
-    link2, created2 = AssetLink.objects.get_or_create(
-        asset=linked_asset, linked_asset=asset,
-        defaults={'notes': notes, 'created_by': request.user}
-    )
+    def sync_chain(chain_pks, trigger_asset):
+        """
+        After linking, synchronise assignment/status across the chain.
+        Rules:
+        - Skip assets with status Missing / Retired / Under Maintenance.
+        - If trigger_asset has an assignee, propagate to the rest (conflict check first).
+        - Conflict = two eligible assets in chain have *different* non-null assignees.
+        """
+        chain_assets = list(Asset.objects.filter(pk__in=chain_pks).select_related('status', 'assigned_to', 'department'))
 
-    if created1 or created2:
-        messages.success(request, f'Linked {asset.asset_id} ↔ {linked_asset.asset_id}')
-    else:
+        # Eligible = not in skip statuses
+        eligible = [a for a in chain_assets if a.status and a.status.name not in SKIP_STATUSES]
+
+        # Collect distinct non-null assignees
+        assignees = {a.assigned_to_id for a in eligible if a.assigned_to_id}
+        depts = {a.department_id for a in eligible if a.department_id is not None}
+
+        # Conflict: more than one distinct person assigned across the chain
+        if len(assignees) > 1:
+            assigned_ids_str = ', '.join(
+                a.assigned_to.get_full_name() or a.assigned_to.username
+                for a in eligible if a.assigned_to_id
+            )
+            messages.warning(
+                request,
+                f'⚠️ Conflict detected: linked assets are assigned to different people ({assigned_ids_str}). '
+                f'Assignment was NOT automatically synced — please resolve manually.'
+            )
+            return
+
+        # If trigger asset is assigned, sync others
+        if trigger_asset.assigned_to_id and trigger_asset.status and trigger_asset.status.name not in SKIP_STATUSES:
+            in_use_status = StatusOption.objects.filter(name='In Use').first()
+            for a in eligible:
+                if a.pk != trigger_asset.pk and (a.assigned_to_id != trigger_asset.assigned_to_id or (in_use_status and a.status_id != in_use_status.pk)):
+                    Asset.objects.filter(pk=a.pk).update(
+                        assigned_to=trigger_asset.assigned_to,
+                        department=trigger_asset.department,
+                        status=in_use_status,
+                    )
+        elif trigger_asset.department_id and not trigger_asset.assigned_to_id:
+            # Department-level assignment
+            for a in eligible:
+                if a.pk != trigger_asset.pk and a.department_id != trigger_asset.department_id:
+                    Asset.objects.filter(pk=a.pk).update(department=trigger_asset.department)
+
+    linked_count = 0
+    already_linked = 0
+
+    for lid in linked_asset_ids:
+        if not str(lid).isdigit():
+            continue
+        if int(lid) == asset.pk:
+            messages.warning(request, 'Skipped: cannot link an asset to itself.')
+            continue
+
+        linked_asset = Asset.objects.filter(pk=lid, is_deleted=False).first()
+        if not linked_asset:
+            continue
+
+        # Gather existing chains before linking
+        chain_a = get_chain(asset)
+        chain_b = get_chain(linked_asset)
+        combined_chain = chain_a | chain_b  # union
+
+        # Create bidirectional links for all cross-chain pairs (chain-link propagation)
+        for pk_a in chain_a:
+            for pk_b in chain_b:
+                if pk_a == pk_b:
+                    continue
+                a_obj = Asset.objects.filter(pk=pk_a).first()
+                b_obj = Asset.objects.filter(pk=pk_b).first()
+                if not a_obj or not b_obj:
+                    continue
+                _, c1 = AssetLink.objects.get_or_create(
+                    asset=a_obj, linked_asset=b_obj,
+                    defaults={'notes': notes, 'created_by': request.user}
+                )
+                AssetLink.objects.get_or_create(
+                    asset=b_obj, linked_asset=a_obj,
+                    defaults={'notes': notes, 'created_by': request.user}
+                )
+                if c1:
+                    linked_count += 1
+                else:
+                    already_linked += 1
+
+        # Auto-assign sync after merging chains
+        sync_chain(combined_chain, asset)
+
+    if linked_count > 0:
+        messages.success(request, f'Successfully linked {linked_count} asset pair(s).')
+    if already_linked > 0 and linked_count == 0:
         messages.info(request, 'These assets are already linked.')
 
     return redirect('assets:detail', pk=pk)
@@ -403,9 +497,48 @@ def asset_links_list(request):
             }
         linked_groups[link.asset_id]['linked_assets'].append(link)
 
+    # Compute incomplete chains: linked clusters where one or more assets are Missing/Under Maintenance
+    PROBLEM_STATUSES = {'Missing', 'Under Maintenance'}
+    all_asset_pks = list(set(
+        list(AssetLink.objects.filter(asset__is_deleted=False).values_list('asset_id', flat=True)) +
+        list(AssetLink.objects.filter(linked_asset__is_deleted=False).values_list('linked_asset_id', flat=True))
+    ))
+    assets_in_links = {
+        a.pk: a
+        for a in Asset.objects.filter(pk__in=all_asset_pks, is_deleted=False).select_related('status', 'assigned_to', 'department', 'category')
+    }
+
+    # Union-find for full chains among all linked assets
+    uf_parent = {pk: pk for pk in all_asset_pks}
+    def uf_find(x):
+        while uf_parent[x] != x:
+            uf_parent[x] = uf_parent.get(uf_parent[x], uf_parent[x])
+            x = uf_parent[x]
+        return x
+    def uf_union(x, y):
+        px, py = uf_find(x), uf_find(y)
+        if px != py:
+            uf_parent[px] = py
+    for lnk in links:
+        if lnk.asset_id in uf_parent and lnk.linked_asset_id in uf_parent:
+            uf_union(lnk.asset_id, lnk.linked_asset_id)
+
+    from collections import defaultdict
+    chain_groups = defaultdict(list)
+    for pk in all_asset_pks:
+        if pk in assets_in_links:
+            chain_groups[uf_find(pk)].append(assets_in_links[pk])
+
+    incomplete_chains = []
+    for group in chain_groups.values():
+        has_problem = any(a.status and a.status.name in PROBLEM_STATUSES for a in group)
+        if has_problem and len(group) > 1:
+            incomplete_chains.append(group)
+
     context = {
         'links': links,
         'linked_groups': linked_groups,
+        'incomplete_chains': incomplete_chains,
     }
     return render(request, 'assets/links_list.html', context)
 

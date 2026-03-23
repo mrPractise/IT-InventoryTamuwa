@@ -3,6 +3,57 @@
 {% block page_title %}Asset Links{% endblock %}
 
 {% block content %}
+
+{% if incomplete_chains %}
+<div class="card border-warning mb-4">
+    <div class="card-header bg-warning bg-opacity-10 text-warning d-flex align-items-center gap-2">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <strong>Incomplete Link Groups</strong>
+        <span class="badge bg-warning text-dark ms-auto">{{ incomplete_chains|length }}</span>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-muted small text-uppercase">
+                <tr>
+                    <th class="ps-4">Asset ID</th>
+                    <th>Category</th>
+                    <th>Assigned To</th>
+                    <th>Status</th>
+                    <th class="pe-4">Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for group in incomplete_chains %}
+                {% for asset in group %}
+                <tr class="{% if asset.status.name == 'Missing' %}table-danger{% elif asset.status.name == 'Under Maintenance' %}table-warning{% endif %}">
+                    <td class="ps-4">
+                        <a href="{% url 'assets:detail' asset.pk %}" class="fw-bold text-decoration-none">{{ asset.asset_id }}</a>
+                    </td>
+                    <td><span class="badge bg-light text-dark border">{{ asset.category.name }}</span></td>
+                    <td>
+                        {% if asset.assigned_to %}<i class="bi bi-person me-1"></i>{{ asset.assigned_to.full_name }}
+                        {% elif asset.department %}<i class="bi bi-building me-1"></i>{{ asset.department.name }}
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if asset.status.name == 'Missing' %}bg-danger{% elif asset.status.name == 'Under Maintenance' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {{ asset.status.name }}
+                        </span>
+                    </td>
+                    <td class="pe-4 text-muted small">
+                        {% if asset.status.name == 'Missing' %}This asset is missing — linked partner(s) may be incomplete.
+                        {% elif asset.status.name == 'Under Maintenance' %}Under maintenance — linked partner(s) may be affected.{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                <tr><td colspan="5" class="bg-light p-0" style="height:4px"></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-link-45deg me-2"></i>Asset Links</span>
@@ -60,6 +111,11 @@
                                         <span class="status-badge status-{{ link.linked_asset.status.name|lower|slugify }} ms-1" style="font-size:0.75rem;">
                                             {{ link.linked_asset.status.name }}
                                         </span>
+                                        {% if link.linked_asset.status.name == 'Missing' %}
+                                        <i class="bi bi-exclamation-triangle-fill text-danger ms-1" title="Missing"></i>
+                                        {% elif link.linked_asset.status.name == 'Under Maintenance' %}
+                                        <i class="bi bi-tools text-warning ms-1" title="Under Maintenance"></i>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 <small class="text-muted">
@@ -96,3 +152,5 @@
     </div>
 </div>
 {% endblock %}
+
+

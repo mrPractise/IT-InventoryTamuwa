@@ -37,8 +37,8 @@
                         </td>
                         <td>{{ item.item_name }}</td>
                         <td>{{ item.quantity }}</td>
-                        <td>KES {{ item.unit_price|floatformat:2|intcomma }}</td>
-                        <td>KES {{ item.total_price|floatformat:2|intcomma }}</td>
+                        <td>{{ item.unit_price|floatformat:0|intcomma }}</td>
+                        <td>{{ item.total_price|floatformat:0|intcomma }}</td>
                         <td>{{ item.requisition.updated_at|date:"M d, Y" }}</td>
                         <td>
                             <div class="d-flex gap-1 flex-wrap">

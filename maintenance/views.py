@@ -74,6 +74,17 @@ def maintenance_create(request):
                 log.completed_by = request.user
             log.save()
 
+            # Auto-update asset status when maintenance is closed
+            if log.maintenance_status == 'Closed':
+                from assets.models import StatusOption
+                asset = log.asset
+                if asset.assigned_to or asset.department:
+                    new_status = StatusOption.objects.filter(name='In Use').first()
+                else:
+                    new_status = StatusOption.objects.filter(name='Available').first()
+                if new_status:
+                    Asset.objects.filter(pk=asset.pk).update(status=new_status)
+
             messages.success(request, f'Maintenance log for {log.asset.asset_id} created successfully!')
             return redirect('maintenance:detail', pk=log.pk)
         else:
@@ -113,6 +124,18 @@ def maintenance_update(request, pk):
                 from django.utils import timezone
                 updated_log.date_completed = timezone.now().date()
             updated_log.save()
+
+            # Auto-update asset status when maintenance is closed
+            if updated_log.maintenance_status == 'Closed':
+                from assets.models import StatusOption
+                asset = updated_log.asset
+                if asset.assigned_to or asset.department:
+                    new_status = StatusOption.objects.filter(name='In Use').first()
+                else:
+                    new_status = StatusOption.objects.filter(name='Available').first()
+                if new_status:
+                    Asset.objects.filter(pk=asset.pk).update(status=new_status)
+
             messages.success(request, f'Maintenance log updated successfully!')
             return redirect('maintenance:detail', pk=log.pk)
         else:

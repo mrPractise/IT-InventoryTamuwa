@@ -76,14 +76,14 @@
                                 <tr>
                                     <td><span class="badge bg-{% if item.item_type == 'Asset' %}primary{% else %}info text-dark{% endif %} bg-opacity-75">{{ item.item_type }}</span></td>
                                     <td>{{ item.item_name }}</td>
-                                    <td class="text-end">KES {{ item.unit_price|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">{{ item.unit_price|floatformat:0|intcomma }}</td>
                                     <td class="text-center">{{ item.quantity }}</td>
-                                    <td class="text-end fw-semibold">KES {{ item.total_price|floatformat:2|intcomma }}</td>
+                                    <td class="text-end fw-semibold">{{ item.total_price|floatformat:0|intcomma }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot class="table-light">
-                                <tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td class="text-end fw-bold text-success">KES {{ total_cost|floatformat:2|intcomma }}</td></tr>
+                                <tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td class="text-end fw-bold text-success">{{ total_cost|floatformat:0|intcomma }}</td></tr>
                             </tfoot>
                         </table>
                     </div>
