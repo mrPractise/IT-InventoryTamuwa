@@ -179,7 +179,12 @@ def mark_item_processed(request, item_pk):
     if asset_id:
         from assets.models import Asset
         asset = get_object_or_404(Asset, pk=asset_id, is_deleted=False)
-        item.is_processed = True
+        
+        if item.quantity > 1:
+            item.quantity -= 1
+        else:
+            item.is_processed = True
+        
         item.save()
         # Automatically update the asset's requisition number
         Asset.objects.filter(pk=asset.pk).update(requisition=item.requisition)

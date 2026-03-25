@@ -301,6 +301,9 @@
                 <a href="{% url 'tasks:list' %}"
                     class="{% if request.resolver_match.app_name == 'tasks' %}active{% endif %}">
                     <i class="bi bi-check2-square"></i> Tasks
+                    {% if todo_tasks_count %}
+                    <span class="badge bg-warning text-dark ms-auto" style="font-size:.7rem;padding:2px 6px;border-radius:999px;">{{ todo_tasks_count }}</span>
+                    {% endif %}
                 </a>
             </li>
             <li>

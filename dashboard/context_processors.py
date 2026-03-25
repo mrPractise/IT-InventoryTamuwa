@@ -57,8 +57,12 @@ def notifications_count(request):
             status__in=['To Do', 'In Progress'],
             due_date__lt=timezone.now()
         ).count()
+        
+        # To Do tasks
+        todo_tasks_count = Task.objects.filter(status='To Do').count()
 
     except Exception:
         count = 0
+        todo_tasks_count = 0
 
-    return {'unread_notifications_count': count}
+    return {'unread_notifications_count': count, 'todo_tasks_count': todo_tasks_count}
