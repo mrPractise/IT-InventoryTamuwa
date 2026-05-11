@@ -270,7 +270,7 @@
                                 </td>
                                 <td>{{ history.linked_asset.category.name }}</td>
                                 <td>
-                                    <span class="badge bg-secondary">{{ history.linked_asset.status.name }}</span>
+                                    <span class="badge {% if history.linked_asset.status.name == 'Missing' %}bg-danger{% else %}bg-secondary{% endif %}">{{ history.linked_asset.status.name }}</span>
                                 </td>
                                 <td>{{ history.unlinked_at|date:"d/m/Y" }}</td>
                             </tr>

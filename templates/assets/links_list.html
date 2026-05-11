@@ -83,7 +83,7 @@
                         <br><small>{{ link.asset.model_description|truncatewords:4 }}</small>
                     </td>
                     <td>
-                        <span class="badge {% if link.asset.status.name == 'In Use' %}bg-success{% else %}bg-secondary{% endif %}">
+                        <span class="badge {% if link.asset.status.name == 'In Use' %}bg-success{% elif link.asset.status.name == 'Missing' %}bg-danger{% else %}bg-secondary{% endif %}">
                             {{ link.asset.status.name|default:"—" }}
                         </span>
                     </td>
@@ -92,7 +92,7 @@
                         <br><small>{{ link.linked_asset.model_description|truncatewords:4 }}</small>
                     </td>
                     <td>
-                        <span class="badge {% if link.linked_asset.status.name == 'In Use' %}bg-success{% else %}bg-secondary{% endif %}">
+                        <span class="badge {% if link.linked_asset.status.name == 'In Use' %}bg-success{% elif link.linked_asset.status.name == 'Missing' %}bg-danger{% else %}bg-secondary{% endif %}">
                             {{ link.linked_asset.status.name|default:"—" }}
                         </span>
                     </td>
@@ -266,7 +266,7 @@
                             {% else %}<span class="text-muted">—</span>{% endif %}
                         </td>
                         <td>
-                            <span class="badge bg-secondary">{{ history.asset.status.name }}</span>
+                            <span class="badge {% if history.asset.status.name == 'Missing' %}bg-danger{% else %}bg-secondary{% endif %}">{{ history.asset.status.name }}</span>
                         </td>
                         <td class="text-nowrap">{{ history.unlinked_at|date:"d/m/Y H:i" }}</td>
                         <td>{{ history.unlinked_by.get_full_name|default:history.unlinked_by.username|default:"—" }}</td>
