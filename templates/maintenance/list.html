@@ -39,11 +39,27 @@
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search"></i> Filter
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-grow-1">
+                            <i class="bi bi-search"></i> Filter
+                        </button>
+                        {% if has_active_filters %}
+                        <a href="?clear_filters=1" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i>
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
+            {% if has_active_filters %}
+            <div class="row mt-2">
+                <div class="col-12">
+                    <span class="badge bg-info">
+                        <i class="bi bi-funnel-fill me-1"></i>Filters Active
+                    </span>
+                </div>
+            </div>
+            {% endif %}
         </form>
 
         <!-- Maintenance Table -->

@@ -5,23 +5,33 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from .models import Task
 from .forms import TaskForm
+from users.decorators import role_required
+from inventory_system.filter_utils import handle_filter_request
 
 
 @login_required
 def task_list(request):
-    """List all tasks with filters"""
+    """List all tasks with filters (with session persistence)"""
+    # Handle filter persistence
+    filter_params = ['status', 'priority', 'search', 'sort']
+    effective_filters, cleared = handle_filter_request(request, 'task_list', filter_params)
+    
+    # If filters were cleared, redirect to clean URL
+    if cleared:
+        return redirect('tasks:list')
+    
     tasks = Task.objects.select_related('assigned_to', 'created_by')
 
     # Filters
-    status_filter = request.GET.get('status', '')
+    status_filter = effective_filters.get('status', '')
     if status_filter:
         tasks = tasks.filter(status=status_filter)
 
-    priority_filter = request.GET.get('priority', '')
+    priority_filter = effective_filters.get('priority', '')
     if priority_filter:
         tasks = tasks.filter(priority=priority_filter)
 
-    search_query = request.GET.get('search', '')
+    search_query = effective_filters.get('search', '')
     if search_query:
         tasks = tasks.filter(
             Q(title__icontains=search_query) |
@@ -29,7 +39,7 @@ def task_list(request):
         )
 
     # Sorting
-    sort_by = request.GET.get('sort', '-created_at')
+    sort_by = effective_filters.get('sort', '-created_at')
     if sort_by in ['due_date', '-due_date', 'priority', '-priority', 'status', '-status', 'created_at', '-created_at']:
         tasks = tasks.order_by(sort_by)
 
@@ -37,12 +47,16 @@ def task_list(request):
     paginator = Paginator(tasks, 25)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    
+    # Check if filters are active
+    has_active_filters = bool(status_filter or priority_filter or search_query or sort_by != '-created_at')
 
     context = {
         'page_obj': page_obj,
         'status_filter': status_filter,
         'priority_filter': priority_filter,
         'search_query': search_query,
+        'has_active_filters': has_active_filters,
     }
     return render(request, 'tasks/list.html', context)
 

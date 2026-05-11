@@ -5,15 +5,24 @@ from django.db.models import Q
 from .models import Technician, TechnicianAssistant, TechnicianService, TechnicianRecommendation
 from .forms import TechnicianForm, TechnicianAssistantForm, TechnicianServiceForm, TechnicianRecommendationForm
 from users.decorators import role_required
+from inventory_system.filter_utils import handle_filter_request
 
 
 @login_required
 def technician_list(request):
-    """List all technicians"""
+    """List all technicians with filter persistence"""
+    # Handle filter persistence
+    filter_params = ['search']
+    effective_filters, cleared = handle_filter_request(request, 'technician_list', filter_params)
+    
+    # If filters were cleared, redirect to clean URL
+    if cleared:
+        return redirect('technicians:list')
+    
     technicians = Technician.objects.filter(is_active=True).prefetch_related('assistants', 'services')
     
     # Search functionality
-    search_query = request.GET.get('search', '')
+    search_query = effective_filters.get('search', '')
     if search_query:
         technicians = technicians.filter(
             Q(company_name__icontains=search_query) |
@@ -22,9 +31,13 @@ def technician_list(request):
             Q(phone_number__icontains=search_query)
         )
     
+    # Check if filters are active
+    has_active_filters = bool(search_query)
+    
     return render(request, 'technicians/list.html', {
         'technicians': technicians,
         'search_query': search_query,
+        'has_active_filters': has_active_filters,
     })
 
 

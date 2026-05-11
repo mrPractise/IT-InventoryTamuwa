@@ -10,17 +10,26 @@ from django.utils import timezone
 from .models import Asset, Category, StatusOption, Department, AssignmentHistory
 from .utils import export_assets_excel
 from users.decorators import role_required
+from inventory_system.filter_utils import handle_filter_request, restore_filters_from_session
 
 
 @login_required
 def asset_list(request):
-    """List all assets with search, filter, and sort"""
+    """List all assets with search, filter, and sort (with session persistence)"""
+    # Handle filter persistence
+    filter_params = ['search', 'category', 'status', 'assigned', 'sort', 'dir']
+    effective_filters, cleared = handle_filter_request(request, 'asset_list', filter_params)
+    
+    # If filters were cleared, redirect to clean URL
+    if cleared:
+        return redirect('assets:list')
+    
     assets = Asset.objects.filter(is_deleted=False).select_related(
         'category', 'status', 'assigned_to', 'department', 'requisition'
     )
 
     # Search
-    search_query = request.GET.get('search', '')
+    search_query = effective_filters.get('search', '')
     if search_query:
         assets = assets.filter(
             Q(asset_id__icontains=search_query) |
@@ -32,15 +41,15 @@ def asset_list(request):
         )
 
     # Filters
-    category_filter = request.GET.get('category')
+    category_filter = effective_filters.get('category', '')
     if category_filter and category_filter.isdigit():
         assets = assets.filter(category_id=category_filter)
 
-    status_filter = request.GET.get('status')
+    status_filter = effective_filters.get('status', '')
     if status_filter and status_filter.isdigit():
         assets = assets.filter(status_id=status_filter)
 
-    assigned_filter = request.GET.get('assigned')
+    assigned_filter = effective_filters.get('assigned', '')
     if assigned_filter == 'assigned':
         assets = assets.exclude(assigned_to__isnull=True)
     elif assigned_filter == 'unassigned':
@@ -56,8 +65,8 @@ def asset_list(request):
         'status': 'status__name',
         'vendor': 'purchased_from',
     }
-    sort_by = request.GET.get('sort', '')
-    sort_dir = request.GET.get('dir', 'asc')
+    sort_by = effective_filters.get('sort', '')
+    sort_dir = effective_filters.get('dir', 'asc')
     orm_field = SORT_MAP.get(sort_by, '-created_at')
     if sort_by and sort_dir == 'desc':
         orm_field = f'-{orm_field}'
@@ -70,6 +79,11 @@ def asset_list(request):
 
     categories = Category.objects.all()
     statuses = StatusOption.objects.filter(is_active=True)
+    
+    # Check if filters are active (for showing clear button)
+    has_active_filters = any([
+        search_query, category_filter, status_filter, assigned_filter, sort_by
+    ])
 
     context = {
         'page_obj': page_obj,
@@ -81,6 +95,7 @@ def asset_list(request):
         'sort_by': sort_by,
         'sort_dir': sort_dir,
         'assigned_filter': assigned_filter,
+        'has_active_filters': has_active_filters,
     }
     
     return render(request, 'assets/list.html', context)

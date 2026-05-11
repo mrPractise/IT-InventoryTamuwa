@@ -6,11 +6,20 @@ from django.db.models import Q
 from .models import MaintenanceLog, ActionTakenOption
 from assets.models import Asset, Person
 from users.decorators import role_required
+from inventory_system.filter_utils import handle_filter_request
 
 
 @login_required
 def maintenance_list(request):
-    """List all maintenance logs"""
+    """List all maintenance logs with filter persistence"""
+    # Handle filter persistence
+    filter_params = ['status', 'search', 'performed_by']
+    effective_filters, cleared = handle_filter_request(request, 'maintenance_list', filter_params)
+    
+    # If filters were cleared, redirect to clean URL
+    if cleared:
+        return redirect('maintenance:list')
+    
     logs = MaintenanceLog.objects.select_related(
         'asset', 'action_taken', 'reported_by', 'performed_by', 'requisition'
     ).order_by('-timestamp')
@@ -20,18 +29,18 @@ def maintenance_list(request):
     technicians = Technician.objects.filter(is_active=True).order_by('company_name', 'technician_name')
 
     # Filters
-    status_filter = request.GET.get('status')
+    status_filter = effective_filters.get('status', '')
     if status_filter:
         logs = logs.filter(maintenance_status=status_filter)
 
-    search_query = request.GET.get('search', '')
+    search_query = effective_filters.get('search', '')
     if search_query:
         logs = logs.filter(
             Q(asset__asset_id__icontains=search_query) |
             Q(description__icontains=search_query)
         )
 
-    performed_by_filter = request.GET.get('performed_by')
+    performed_by_filter = effective_filters.get('performed_by', '')
     if performed_by_filter:
         logs = logs.filter(performed_by_id=performed_by_filter)
 
@@ -39,6 +48,9 @@ def maintenance_list(request):
     paginator = Paginator(logs, 25)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    
+    # Check if filters are active
+    has_active_filters = bool(status_filter or search_query or performed_by_filter)
 
     from assets.models import Person  # already imported at top level, keeping for safety
     context = {
@@ -47,6 +59,7 @@ def maintenance_list(request):
         'search_query': search_query,
         'performed_by_filter': performed_by_filter,
         'all_technicians': technicians,
+        'has_active_filters': has_active_filters,
     }
 
     return render(request, 'maintenance/list.html', context)

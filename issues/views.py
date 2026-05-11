@@ -8,6 +8,7 @@ from .models import Issue, IssueComment, Project, ProjectComment, ProjectItem
 from .forms import IssueForm, ProjectForm, CommentForm
 from users.decorators import role_required
 from assets.models import Category, Asset
+from inventory_system.filter_utils import handle_filter_request
 
 
 def _is_admin(user):
@@ -16,10 +17,18 @@ def _is_admin(user):
 
 @login_required
 def issue_list(request):
-    """View to list all Issues with filtering and pagination."""
-    search = request.GET.get('i_search', '')
-    priority = request.GET.get('i_priority', '')
-    status = request.GET.get('i_status', '')
+    """View to list all Issues with filtering and pagination (with session persistence)."""
+    # Handle filter persistence
+    filter_params = ['i_search', 'i_priority', 'i_status']
+    effective_filters, cleared = handle_filter_request(request, 'issue_list', filter_params)
+    
+    # If filters were cleared, redirect to clean URL
+    if cleared:
+        return redirect('issues:issue_list')
+    
+    search = effective_filters.get('i_search', '')
+    priority = effective_filters.get('i_priority', '')
+    status = effective_filters.get('i_status', '')
 
     issues_qs = Issue.objects.select_related('asset', 'department', 'reported_by')
     if search:
@@ -36,6 +45,9 @@ def issue_list(request):
 
     issue_priority_choices = [(val, label, val == priority) for val, label in Issue.PRIORITY_CHOICES]
     issue_status_choices = [(val, label, val == status) for val, label in Issue.STATUS_CHOICES]
+    
+    # Check if filters are active
+    has_active_filters = bool(search or priority or status)
 
     return render(request, 'issues/issue_list.html', {
         'issues_page': page_obj,
@@ -45,15 +57,24 @@ def issue_list(request):
         'i_status': status,
         'issue_priority_choices': issue_priority_choices,
         'issue_status_choices': issue_status_choices,
+        'has_active_filters': has_active_filters,
     })
 
 
 @login_required
 def project_list(request):
-    """View to list all Projects with filtering and pagination."""
-    search = request.GET.get('p_search', '')
-    priority = request.GET.get('p_priority', '')
-    status = request.GET.get('p_status', '')
+    """View to list all Projects with filtering and pagination (with session persistence)."""
+    # Handle filter persistence
+    filter_params = ['p_search', 'p_priority', 'p_status']
+    effective_filters, cleared = handle_filter_request(request, 'project_list', filter_params)
+    
+    # If filters were cleared, redirect to clean URL
+    if cleared:
+        return redirect('issues:project_list')
+    
+    search = effective_filters.get('p_search', '')
+    priority = effective_filters.get('p_priority', '')
+    status = effective_filters.get('p_status', '')
 
     projects_qs = Project.objects.prefetch_related('categories', 'requisitions').select_related('reported_by')
     if search:
@@ -70,6 +91,9 @@ def project_list(request):
 
     project_priority_choices = [(val, label, val == priority) for val, label in Project.PRIORITY_CHOICES]
     project_status_choices = [(val, label, val == status) for val, label in Project.STATUS_CHOICES]
+    
+    # Check if filters are active
+    has_active_filters = bool(search or priority or status)
 
     return render(request, 'issues/project_list.html', {
         'projects_page': page_obj,
@@ -79,6 +103,7 @@ def project_list(request):
         'p_status': status,
         'project_priority_choices': project_priority_choices,
         'project_status_choices': project_status_choices,
+        'has_active_filters': has_active_filters,
     })
 
 

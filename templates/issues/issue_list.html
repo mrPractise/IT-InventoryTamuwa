@@ -15,7 +15,7 @@
     </div>
 
     <!-- Issue filters -->
-    <form method="get" class="row g-2 mb-3">
+    <form method="get" class="row g-2 mb-2">
         <div class="col-md-4">
             <input type="text" name="i_search" value="{{ i_search }}" class="form-control form-control-sm"
                 placeholder="Search title or description...">
@@ -39,9 +39,18 @@
         <div class="col-md-4 d-flex gap-2">
             <button type="submit" class="btn btn-sm btn-primary flex-fill"><i
                     class="bi bi-funnel me-1"></i>Filter</button>
-            <a href="{% url 'issues:issue_list' %}" class="btn btn-sm btn-outline-secondary flex-fill">Clear</a>
+            {% if has_active_filters %}
+            <a href="?clear_filters=1" class="btn btn-sm btn-outline-secondary flex-fill">Clear</a>
+            {% endif %}
         </div>
     </form>
+    {% if has_active_filters %}
+    <div class="mb-3">
+        <span class="badge bg-info">
+            <i class="bi bi-funnel-fill me-1"></i>Filters Active
+        </span>
+    </div>
+    {% endif %}
 
     {% if issues_page %}
     <div class="table-responsive">
@@ -99,15 +108,11 @@
         </table>
     </div>
     {% if issues_page.has_other_pages %}
-    <nav>
+    <nav class="mt-3">
         <ul class="pagination pagination-sm justify-content-end mb-0">
-            {% if issues_page.has_previous %}<li class="page-item"><a class="page-link"
-                    href="?page={{ issues_page.previous_page_number }}&i_search={{ i_search }}&i_priority={{ i_priority }}&i_status={{ i_status }}">«</a>
-            </li>{% endif %}
+            {% if issues_page.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ issues_page.previous_page_number }}">«</a></li>{% endif %}
             <li class="page-item active"><span class="page-link">{{ issues_page.number }}/{{ issues_page.paginator.num_pages }}</span></li>
-            {% if issues_page.has_next %}<li class="page-item"><a class="page-link"
-                    href="?page={{ issues_page.next_page_number }}&i_search={{ i_search }}&i_priority={{ i_priority }}&i_status={{ i_status }}">»</a>
-            </li>{% endif %}
+            {% if issues_page.has_next %}<li class="page-item"><a class="page-link" href="?page={{ issues_page.next_page_number }}">»</a></li>{% endif %}
         </ul>
     </nav>
     {% endif %}

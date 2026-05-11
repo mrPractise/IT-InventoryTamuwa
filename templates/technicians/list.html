@@ -23,12 +23,19 @@
         <button type="submit" class="btn btn-outline-secondary">
             <i class="bi bi-search"></i>
         </button>
-        {% if search_query %}
-        <a href="{% url 'technicians:list' %}" class="btn btn-outline-danger">
+        {% if has_active_filters %}
+        <a href="?clear_filters=1" class="btn btn-outline-danger">
             <i class="bi bi-x-circle"></i> Clear
         </a>
         {% endif %}
     </form>
+    {% if has_active_filters %}
+    <div class="mt-2">
+        <span class="badge bg-info">
+            <i class="bi bi-funnel-fill me-1"></i>Filters Active
+        </span>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Technicians Grid -->

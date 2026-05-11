@@ -6,18 +6,28 @@ from django.views.decorators.http import require_POST
 from .models import Requisition, RequisitionItem
 from .forms import RequisitionForm, RequisitionItemFormSet
 from users.decorators import role_required
+from inventory_system.filter_utils import handle_filter_request
 
 
 @login_required
 def requisition_list(request):
+    """List all requisitions with filter persistence"""
+    # Handle filter persistence
+    filter_params = ['status', 'sort', 'dir']
+    effective_filters, cleared = handle_filter_request(request, 'requisition_list', filter_params)
+    
+    # If filters were cleared, redirect to clean URL
+    if cleared:
+        return redirect('requisition:list')
+    
     qs = Requisition.objects.all().prefetch_related('items')
-    status_filter = request.GET.get('status', '')
+    status_filter = effective_filters.get('status', '')
     if status_filter:
         qs = qs.filter(status=status_filter)
 
     # Sorting
-    sort_by = request.GET.get('sort', '-created_at')
-    sort_dir = request.GET.get('dir', 'desc')
+    sort_by = effective_filters.get('sort', '-created_at')
+    sort_dir = effective_filters.get('dir', 'desc')
     SORT_MAP = {
         'req_no': 'req_no',
         'title': 'title',
@@ -34,6 +44,9 @@ def requisition_list(request):
     paginator = Paginator(qs, 20)
     page = request.GET.get('page')
     requisitions = paginator.get_page(page)
+    
+    # Check if filters are active
+    has_active_filters = bool(status_filter or sort_by)
 
     return render(request, 'requisition/list.html', {
         'requisitions': requisitions,
@@ -41,6 +54,7 @@ def requisition_list(request):
         'status_choices': Requisition.STATUS_CHOICES,
         'sort_by': sort_by,
         'sort_dir': sort_dir,
+        'has_active_filters': has_active_filters,
     })
 
 

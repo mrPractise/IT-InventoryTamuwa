@@ -16,7 +16,7 @@
     <div class="card-body">
 
         <!-- Filters -->
-        <form method="get" class="row g-2 mb-4">
+        <form method="get" class="row g-2 mb-2">
             <div class="col-md-4">
                 <select name="status" class="form-control" onchange="this.form.submit()">
                     <option value="">All Statuses</option>
@@ -25,9 +25,18 @@
                     {% endfor %}
                 </select>
             </div>
+            {% if has_active_filters %}
             <div class="col-auto">
-                <a href="{% url 'requisition:list' %}" class="btn btn-secondary">Clear</a>
+                <a href="?clear_filters=1" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i>Clear
+                </a>
             </div>
+            <div class="col-auto d-flex align-items-center">
+                <span class="badge bg-info">
+                    <i class="bi bi-funnel-fill me-1"></i>Filters Active
+                </span>
+            </div>
+            {% endif %}
         </form>
 
         <div class="table-responsive">
