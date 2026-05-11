@@ -192,8 +192,7 @@
                         </thead>
                         <tbody>
                             {% for link in linked_assets %}
-                            {% with asset_in_use=asset.status.name == 'In Use' linked_in_use=link.linked_asset.status.name == 'In Use' %}
-                            <tr {% if not asset_in_use or not linked_in_use %}class="table-secondary text-muted"{% endif %}>
+                            <tr {% if asset.status.name != 'In Use' or link.linked_asset.status.name != 'In Use' %}class="table-secondary text-muted"{% endif %}>
                                 <td>
                                     <a href="{% url 'assets:detail' link.linked_asset.pk %}" class="text-decoration-none">
                                         {{ link.linked_asset.asset_id }}
@@ -207,7 +206,7 @@
                                     </span>
                                 </td>
                                 <td>
-                                    {% if asset_in_use and linked_in_use %}
+                                    {% if asset.status.name == 'In Use' and link.linked_asset.status.name == 'In Use' %}
                                     <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Active</span>
                                     {% else %}
                                     <span class="badge bg-secondary" title="Link complete only when both assets are 'In Use'"><i class="bi bi-pause-circle me-1"></i>Inactive</span>
@@ -226,7 +225,6 @@
                                 </td>
                                 {% endif %}
                             </tr>
-                            {% endwith %}
                             {% empty %}
                             <tr>
                                 <td colspan="7" class="text-center text-muted">No linked assets</td>
