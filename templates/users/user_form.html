@@ -8,7 +8,7 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-{% if is_create %}plus-circle{% else %}pencil{% endif %}"></i> {{ title }}</span>
-                <a href="{% url 'users:user_list' %}" class="btn btn-sm btn-light">
+                <a href="javascript:history.back()" class="btn btn-sm btn-light">
                     <i class="bi bi-arrow-left me-1"></i>Back
                 </a>
             </div>

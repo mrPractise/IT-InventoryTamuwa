@@ -25,7 +25,7 @@
                     </div>
                     {% endfor %}
                     <div class="d-flex justify-content-between mt-4">
-                        <a href="{% if editing %}{% url 'users:department_assets' obj.id %}{% else %}{% url 'users:directory' %}{% endif %}"
+                        <a href="javascript:history.back()"
                             class="btn btn-outline-secondary">Cancel</a>
                         <button type="submit" class="btn btn-primary">{% if editing %}Save Changes{% else %}Create
                             Department{% endif %}</button>

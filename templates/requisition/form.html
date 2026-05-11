@@ -15,7 +15,7 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-{% if req %}pencil{% else %}plus-circle{% endif %} me-2"></i>{{ title }}</span>
-        <a href="{% if req %}{% url 'requisition:detail' req.pk %}{% else %}{% url 'requisition:list' %}{% endif %}" class="btn btn-sm btn-light">
+        <a href="javascript:history.back()" class="btn btn-sm btn-light">
             <i class="bi bi-arrow-left me-1"></i>Back
         </a>
     </div>

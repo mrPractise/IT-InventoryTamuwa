@@ -14,7 +14,7 @@
                     <a href="{% url 'issues:issue_update' issue.pk %}" class="btn btn-sm btn-warning"><i class="bi bi-pencil me-1"></i>Edit</a>
                     {% endif %}
                     {% endif %}
-                    <a href="{% url 'issues:home' %}?tab=issues" class="btn btn-sm btn-light"><i class="bi bi-arrow-left me-1"></i>Back</a>
+                    <a href="javascript:history.back()" class="btn btn-sm btn-light"><i class="bi bi-arrow-left me-1"></i>Back</a>
                 </div>
             </div>
             <div class="card-body">
