@@ -183,6 +183,7 @@
                                 <th>Category</th>
                                 <th>Description</th>
                                 <th>Status</th>
+                                <th>Link Status</th>
                                 <th>Notes</th>
                                 {% if user.profile.role == 'super_admin' or user.profile.role == 'admin' or user.is_superuser %}
                                 <th style="width:50px"></th>
@@ -191,7 +192,8 @@
                         </thead>
                         <tbody>
                             {% for link in linked_assets %}
-                            <tr>
+                            {% with asset_in_use=asset.status.name == 'In Use' linked_in_use=link.linked_asset.status.name == 'In Use' %}
+                            <tr {% if not asset_in_use or not linked_in_use %}class="table-secondary text-muted"{% endif %}>
                                 <td>
                                     <a href="{% url 'assets:detail' link.linked_asset.pk %}" class="text-decoration-none">
                                         {{ link.linked_asset.asset_id }}
@@ -203,6 +205,13 @@
                                     <span class="status-badge status-{{ link.linked_asset.status.name|lower|slugify }}">
                                         {{ link.linked_asset.status.name }}
                                     </span>
+                                </td>
+                                <td>
+                                    {% if asset_in_use and linked_in_use %}
+                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary" title="Link complete only when both assets are 'In Use'"><i class="bi bi-pause-circle me-1"></i>Inactive</span>
+                                    {% endif %}
                                 </td>
                                 <td>{{ link.notes|default:"—" }}</td>
                                 {% if user.profile.role == 'super_admin' or user.profile.role == 'admin' or user.is_superuser %}
@@ -217,14 +226,21 @@
                                 </td>
                                 {% endif %}
                             </tr>
+                            {% endwith %}
                             {% empty %}
                             <tr>
-                                <td colspan="6" class="text-center text-muted">No linked assets</td>
+                                <td colspan="7" class="text-center text-muted">No linked assets</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
+                {% if linked_assets %}
+                <small class="text-muted mt-2 d-block">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Links are only considered "active" when both assets have "In Use" status.
+                </small>
+                {% endif %}
             </div>
         </div>
 

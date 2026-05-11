@@ -557,7 +557,11 @@ def asset_unlink(request, pk, link_pk):
 
 @login_required
 def asset_links_list(request):
-    """View all asset links with their assigned people/departments and status, plus recently unlinked."""
+    """View all asset links with their assigned people/departments and status, plus recently unlinked.
+    
+    Links are only considered "active" if BOTH assets have status "In Use".
+    Otherwise, they are treated as "inactive" (effectively unlinked).
+    """
     from .models import AssetLink, AssetLinkHistory
     
     # Get all links with related data
@@ -572,9 +576,21 @@ def asset_links_list(request):
         'asset__department', 'linked_asset__department'
     ).order_by('asset__asset_id')
 
-    # Group links by primary asset
-    linked_groups = {}
+    # Separate active links (both assets "In Use") from inactive links
+    active_links = []
+    inactive_links = []
     for link in links:
+        asset_status = link.asset.status.name if link.asset.status else None
+        linked_status = link.linked_asset.status.name if link.linked_asset.status else None
+        
+        if asset_status == 'In Use' and linked_status == 'In Use':
+            active_links.append(link)
+        else:
+            inactive_links.append(link)
+
+    # Group active links by primary asset
+    linked_groups = {}
+    for link in active_links:
         if link.asset_id not in linked_groups:
             linked_groups[link.asset_id] = {
                 'primary_asset': link.asset,
@@ -637,8 +653,10 @@ def asset_links_list(request):
     ).order_by('-unlinked_at')[:50]
 
     context = {
-        'links': links,
+        'links': active_links,
         'linked_groups': linked_groups,
+        'inactive_links': inactive_links,
+        'inactive_count': len(inactive_links),
         'incomplete_chains': incomplete_chains,
         'recently_unlinked': recently_unlinked,
     }
