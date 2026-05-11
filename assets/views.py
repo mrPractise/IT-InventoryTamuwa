@@ -102,15 +102,17 @@ def asset_detail(request, pk):
 
     # Get linked assets
     linked_assets = asset.get_linked_assets()
-    all_assets_for_linking = Asset.objects.filter(is_deleted=False).exclude(pk=pk).order_by('asset_id')
-    
+    # Exclude already-linked assets + self from available for linking
+    linked_asset_ids = linked_assets.values_list('linked_asset_id', flat=True)
+    unlinked_assets = Asset.objects.filter(is_deleted=False).exclude(pk=pk).exclude(pk__in=linked_asset_ids).order_by('asset_id')
+
     context = {
         'asset': asset,
         'assignment_history': assignment_history,
         'maintenance_logs': maintenance_logs,
         'activity_logs': activity_logs,
         'linked_assets': linked_assets,
-        'all_assets_for_linking': all_assets_for_linking,
+        'unlinked_assets': unlinked_assets,
     }
     
     return render(request, 'assets/detail.html', context)
