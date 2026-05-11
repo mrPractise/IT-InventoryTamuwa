@@ -103,7 +103,8 @@ def asset_list(request):
 
 @login_required
 def asset_detail(request, pk):
-    """Asset detail view with full history"""
+    """Asset detail view with full history including link history"""
+    from .models import AssetLinkHistory
     asset = get_object_or_404(Asset, pk=pk, is_deleted=False)
     
     # Get assignment history
@@ -120,6 +121,15 @@ def asset_detail(request, pk):
     # Exclude already-linked assets + self from available for linking
     linked_asset_ids = linked_assets.values_list('linked_asset_id', flat=True)
     unlinked_assets = Asset.objects.filter(is_deleted=False).exclude(pk=pk).exclude(pk__in=linked_asset_ids).order_by('asset_id')
+    
+    # Get link history - assets previously linked to this one
+    link_history = AssetLinkHistory.objects.filter(
+        asset=asset,
+        linked_asset__is_deleted=False
+    ).select_related(
+        'linked_asset', 'linked_asset__category', 'linked_asset__status',
+        'linked_asset__assigned_to', 'unlinked_by'
+    ).order_by('-unlinked_at')[:10]
 
     context = {
         'asset': asset,
@@ -128,6 +138,7 @@ def asset_detail(request, pk):
         'activity_logs': activity_logs,
         'linked_assets': linked_assets,
         'unlinked_assets': unlinked_assets,
+        'link_history': link_history,
     }
     
     return render(request, 'assets/detail.html', context)
@@ -507,27 +518,47 @@ def asset_link(request, pk):
 @role_required(['super_admin', 'admin'])
 @require_POST
 def asset_unlink(request, pk, link_pk):
-    """Remove a link between two assets"""
-    from .models import AssetLink
+    """Remove a link between two assets and track in history"""
+    from .models import AssetLink, AssetLinkHistory
     asset = get_object_or_404(Asset, pk=pk, is_deleted=False)
     link = get_object_or_404(AssetLink, pk=link_pk, asset=asset)
 
+    linked_asset = link.linked_asset
+    linked_id = linked_asset.asset_id
+    notes = link.notes
+    linked_at = link.created_at
+
+    # Create history records for both directions before deleting
+    AssetLinkHistory.objects.create(
+        asset=asset,
+        linked_asset=linked_asset,
+        notes=notes,
+        linked_at=linked_at,
+        unlinked_by=request.user
+    )
+    AssetLinkHistory.objects.create(
+        asset=linked_asset,
+        linked_asset=asset,
+        notes=notes,
+        linked_at=linked_at,
+        unlinked_by=request.user
+    )
+
     # Remove both directions
     reverse_link = AssetLink.objects.filter(
-        asset=link.linked_asset, linked_asset=asset
+        asset=linked_asset, linked_asset=asset
     )
     reverse_link.delete()
-    linked_id = link.linked_asset.asset_id
     link.delete()
 
-    messages.success(request, f'Unlinked {asset.asset_id} ↔ {linked_id}')
+    messages.success(request, f'Unlinked {asset.asset_id} ↔ {linked_id}. Link history saved.')
     return redirect('assets:detail', pk=pk)
 
 
 @login_required
 def asset_links_list(request):
-    """View all asset links with their assigned people/departments and status."""
-    from .models import AssetLink
+    """View all asset links with their assigned people/departments and status, plus recently unlinked."""
+    from .models import AssetLink, AssetLinkHistory
     
     # Get all links with related data
     links = AssetLink.objects.filter(
@@ -589,10 +620,27 @@ def asset_links_list(request):
         if has_problem and len(group) > 1:
             incomplete_chains.append(group)
 
+    # Get recently unlinked assets (last 30 days)
+    from datetime import timedelta
+    recent_threshold = timezone.now() - timedelta(days=30)
+    recently_unlinked = AssetLinkHistory.objects.filter(
+        unlinked_at__gte=recent_threshold,
+        asset__is_deleted=False,
+        linked_asset__is_deleted=False
+    ).select_related(
+        'asset', 'linked_asset',
+        'asset__category', 'linked_asset__category',
+        'asset__status', 'linked_asset__status',
+        'asset__assigned_to', 'linked_asset__assigned_to',
+        'asset__department', 'linked_asset__department',
+        'unlinked_by'
+    ).order_by('-unlinked_at')[:50]
+
     context = {
         'links': links,
         'linked_groups': linked_groups,
         'incomplete_chains': incomplete_chains,
+        'recently_unlinked': recently_unlinked,
     }
     return render(request, 'assets/links_list.html', context)
 

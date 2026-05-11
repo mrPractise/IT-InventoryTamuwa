@@ -271,3 +271,23 @@ class AssetLink(models.Model):
     def __str__(self):
         return f"{self.asset.asset_id} ↔ {self.linked_asset.asset_id}"
 
+
+class AssetLinkHistory(models.Model):
+    """Track assets that were previously linked but have been unlinked"""
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='link_history_from')
+    linked_asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='link_history_to')
+    notes = models.CharField(max_length=255, blank=True)
+    linked_at = models.DateTimeField(null=True, blank=True)
+    unlinked_at = models.DateTimeField(default=timezone.now)
+    unlinked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-unlinked_at']
+        indexes = [
+            models.Index(fields=['asset', 'unlinked_at']),
+            models.Index(fields=['linked_asset', 'unlinked_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.asset.asset_id} ⊘ {self.linked_asset.asset_id} (unlinked {self.unlinked_at.date()})"
+

@@ -151,6 +151,73 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Recently Unlinked Section -->
+{% if recently_unlinked %}
+<div class="card mt-4 border-secondary">
+    <div class="card-header d-flex justify-content-between align-items-center bg-secondary bg-opacity-10">
+        <span><i class="bi bi-clock-history me-2"></i>Recently Unlinked (Last 30 Days)</span>
+        <span class="badge bg-secondary">{{ recently_unlinked|length }} records</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Previously Linked Pair</th>
+                        <th>Categories</th>
+                        <th>Assigned To</th>
+                        <th>Status</th>
+                        <th>Unlinked At</th>
+                        <th>Unlinked By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for history in recently_unlinked %}
+                    <tr class="text-muted">
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{% url 'assets:detail' history.asset.pk %}" class="fw-bold text-decoration-none">
+                                    {{ history.asset.asset_id }}
+                                </a>
+                                <i class="bi bi-x-lg text-danger"></i>
+                                <a href="{% url 'assets:detail' history.linked_asset.pk %}" class="fw-bold text-decoration-none">
+                                    {{ history.linked_asset.asset_id }}
+                                </a>
+                            </div>
+                            {% if history.notes %}<small class="text-muted">{{ history.notes }}</small>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ history.asset.category.name }}</span>
+                            <span class="badge bg-light text-dark border">{{ history.linked_asset.category.name }}</span>
+                        </td>
+                        <td>
+                            {% if history.asset.assigned_to %}
+                            <i class="bi bi-person me-1"></i>{{ history.asset.assigned_to.full_name }}
+                            {% elif history.asset.department %}
+                            <i class="bi bi-building me-1"></i>{{ history.asset.department.name }}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ history.asset.status.name }}</span>
+                        </td>
+                        <td class="text-nowrap">{{ history.unlinked_at|date:"d/m/Y H:i" }}</td>
+                        <td>{{ history.unlinked_by.get_full_name|default:history.unlinked_by.username|default:"—" }}</td>
+                        <td>
+                            <a href="{% url 'assets:detail' history.asset.pk %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 

@@ -227,6 +227,46 @@
                 </div>
             </div>
         </div>
+
+        <!-- Link History - Previously Linked Assets -->
+        {% if link_history %}
+        <div class="card mt-4 border-secondary">
+            <div class="card-header bg-secondary bg-opacity-10 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-clock-history me-2"></i>Previously Linked</span>
+                <span class="badge bg-secondary">{{ link_history|length }}</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Asset ID</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th>Unlinked</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for history in link_history %}
+                            <tr class="text-muted">
+                                <td>
+                                    <a href="{% url 'assets:detail' history.linked_asset.pk %}">
+                                        {{ history.linked_asset.asset_id }}
+                                    </a>
+                                </td>
+                                <td>{{ history.linked_asset.category.name }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ history.linked_asset.status.name }}</span>
+                                </td>
+                                <td>{{ history.unlinked_at|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <div class="col-md-4">
