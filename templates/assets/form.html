@@ -14,6 +14,12 @@
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
+            {% if requisition_id %}
+            <input type="hidden" name="requisition_id" value="{{ requisition_id }}">
+            {% endif %}
+            {% if item_name %}
+            <input type="hidden" name="item_name" value="{{ item_name }}">
+            {% endif %}
             {{ form|crispy }}
             <div class="mt-4">
                 <button type="submit" class="btn btn-primary">

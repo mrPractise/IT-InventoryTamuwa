@@ -159,6 +159,11 @@ def _track_assignment_change(asset, old_person_id, old_department_id):
 def asset_create(request):
     """Create new asset"""
     from .forms import AssetForm
+    from requisition.models import RequisitionItem
+    
+    # Get query params for pre-population (from Bought Items Queue)
+    req_id = request.GET.get('requisition') or request.POST.get('requisition_id')
+    item_name = request.GET.get('item') or request.POST.get('item_name')
     
     if request.method == 'POST':
         form = AssetForm(request.POST, request.FILES)
@@ -193,6 +198,27 @@ def asset_create(request):
             
             # Track initial assignment
             _track_assignment_change(asset, None, None)
+            
+            # Reduce quantity from Bought Items Queue if applicable
+            if req_id and item_name:
+                try:
+                    req_item = RequisitionItem.objects.get(
+                        requisition_id=req_id,
+                        item_name=item_name,
+                        is_processed=False
+                    )
+                    if req_item.quantity > 1:
+                        req_item.quantity -= 1
+                        req_item.save()
+                        messages.info(request, f"Remaining quantity for '{item_name}': {req_item.quantity}")
+                    else:
+                        req_item.is_processed = True
+                        req_item.processed_at = timezone.now()
+                        req_item.processed_by = request.user
+                        req_item.save()
+                        messages.info(request, f"'{item_name}' fully processed and removed from queue.")
+                except RequisitionItem.DoesNotExist:
+                    pass  # Item may have been processed already
 
             messages.success(request, f'Asset {asset.asset_id} created successfully!')
             return redirect('assets:detail', pk=asset.pk)
@@ -203,9 +229,20 @@ def asset_create(request):
                 for error in errors:
                     messages.error(request, f"{label}: {error}" if field != '__all__' else error)
     else:
-        form = AssetForm()
+        # Pre-populate form with requisition data if coming from Bought Items Queue
+        initial = {}
+        if req_id:
+            initial['requisition'] = req_id
+        if item_name:
+            initial['model_description'] = item_name
+        form = AssetForm(initial=initial)
     
-    return render(request, 'assets/form.html', {'form': form, 'title': 'Create Asset'})
+    return render(request, 'assets/form.html', {
+        'form': form,
+        'title': 'Create Asset',
+        'requisition_id': req_id,
+        'item_name': item_name,
+    })
 
 
 @login_required

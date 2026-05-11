@@ -182,9 +182,13 @@ def mark_item_processed(request, item_pk):
         
         if item.quantity > 1:
             item.quantity -= 1
+            messages.info(request, f"Remaining quantity for '{item.item_name}': {item.quantity}")
         else:
             item.is_processed = True
-        
+            item.processed_at = timezone.now()
+            item.processed_by = request.user
+            messages.info(request, f"'{item.item_name}' fully processed and removed from queue.")
+
         item.save()
         # Automatically update the asset's requisition number
         Asset.objects.filter(pk=asset.pk).update(requisition=item.requisition)
